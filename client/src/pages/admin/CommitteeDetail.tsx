@@ -349,6 +349,20 @@ export default function CommitteeDetail() {
     }
   };
 
+  // حذف تقييمات الأعضاء: clear members' بند scores + votes so the evaluation can be redone (re-open).
+  const handleResetEvaluations = async () => {
+    if (!window.confirm('سيتم حذف جميع درجات وتقييمات الأعضاء لإعادة التقييم من جديد.\nلا يمكن التراجع — هل أنت متأكد؟')) return;
+    setSessionNotice('');
+    try {
+      await bulkOfficerAction(committeeId, 'reset-evaluations');
+      await fetchData();
+      await fetchSessionOfficers();
+      await fetchSessionStatus();
+    } catch {
+      setSessionNotice('فشل حذف تقييمات الأعضاء');
+    }
+  };
+
   const handleGoSeniority = (direction: 'next' | 'prev' = 'next') => {
     // Seniority is akdam_no + optional akdam_rep letter (e.g. "5 أ"). Either part matches on
     // a partial entry, so "5" finds 5, 15 and 502 and "أ" finds every أ rep — the whole value
@@ -1005,6 +1019,7 @@ export default function CommitteeDetail() {
               <button onClick={() => handleBulk('done-all')} className="btn-secondary text-sm">تم الكل</button>
               <button onClick={() => handleBulk('reset-done')} className="btn-secondary text-sm">حذف تم</button>
               <button onClick={() => handleBulk('hide-all')} className="btn-secondary text-sm">اخفاء الكل</button>
+              <button onClick={handleResetEvaluations} className="rounded-lg border border-red-300 px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50">حذف تقييمات الأعضاء</button>
               <button onClick={handleResetSession} className="rounded-lg border border-red-300 px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50">حذف قرارات اللجنة</button>
             </div>
             <div className="flex items-center gap-2">
@@ -1039,7 +1054,9 @@ export default function CommitteeDetail() {
                     <th className="px-3 py-3 font-medium">المسلسل</th>
                     <th className="px-3 py-3 font-medium">الأقدمية</th>
                     <th className="px-3 py-3 font-medium">إسم الضابط</th>
-                    <th className="px-3 py-3 font-medium text-center">منتظر</th>
+                    <th className="px-3 py-3 font-medium text-center">الحالي</th>
+                    <th className="px-3 py-3 font-medium text-center">منتظر حضور</th>
+                    <th className="px-3 py-3 font-medium text-center">اعتذار</th>
                     <th className="px-3 py-3 font-medium text-center">تم</th>
                     <th className="px-3 py-3 font-medium text-center">إخفاء</th>
                     <th className="px-3 py-3 font-medium text-center">التصويت</th>
@@ -1074,6 +1091,22 @@ export default function CommitteeDetail() {
                           name="active-officer"
                           checked={o.is_active === 1}
                           onChange={() => handleSetActive(o.officer_id)}
+                          className="w-4 h-4"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={o.attendance === 0}
+                          onChange={e => handleFlagToggle(o.officer_id, 'attendance', !e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={o.apology === 1}
+                          onChange={e => handleFlagToggle(o.officer_id, 'apology', e.target.checked)}
                           className="w-4 h-4"
                         />
                       </td>

@@ -831,6 +831,15 @@ router.post('/:id/officers/bulk', requireAdmin, (req: AuthRequest, res: Response
       // can be run again; otherwise it stays "completed" and the reset appears to do nothing.
       db.run("UPDATE committees SET status = 'draft' WHERE id = ? AND status = 'completed'", [committeeId]);
       break;
+    // "حذف تقييمات الأعضاء": clear every member's بند scores + votes so the evaluation can be redone,
+    // and re-open the officers (done / final decision reset). A backup is taken first.
+    case 'reset-evaluations':
+      backupCommittee(committeeId);
+      db.run('DELETE FROM member_item_scores WHERE committee_id = ?', [committeeId]);
+      db.run('UPDATE member_votes SET user_opinion = 2, eval_state = 0 WHERE committee_id = ?', [committeeId]);
+      db.run('UPDATE committee_officers SET done = 0, final_eval = NULL WHERE committee_id = ?', [committeeId]);
+      db.run("UPDATE committees SET status = 'draft' WHERE id = ? AND status = 'completed'", [committeeId]);
+      break;
     default:
       res.status(400).json({ error: 'إجراء غير معروف' });
       return;
