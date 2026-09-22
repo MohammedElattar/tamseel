@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { toArabicDigits } from '../../utils/format';
 
 export interface EvalItem {
@@ -53,20 +53,31 @@ export default function TamseelVotingScreen({
   // The بند currently selected in the grid — its tile picker shows on the side.
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
 
+  // Re-initialise the member's picks from the server on two events: when the active officer changes,
+  // and when the admin resets this member's evaluation (eval_state drops 1 -> 0 while the SAME officer
+  // is shown). The latter stops a stale cached score from being re-saved after a «حذف تقييمات الأعضاء»
+  // reset. Normal polling (eval_state unchanged) never clobbers the member's unsaved picks.
+  const prevRef = useRef<{ oid: any; es: any }>({ oid: undefined, es: undefined });
   useEffect(() => {
-    const init: Record<number, string> = {};
-    const my = officer?.my_scores || {};
-    for (const it of evalItems) {
-      if (it.kind === 'computed') continue;
-      const v = my[it.id];
-      init[it.id] = v == null ? '' : String(v);
+    const oid = officer?.officer_id;
+    const es = myVote?.eval_state;
+    const officerChanged = prevRef.current.oid !== oid;
+    const resetDetected = !officerChanged && prevRef.current.es === 1 && es === 0;
+    if (officerChanged || resetDetected) {
+      const init: Record<number, string> = {};
+      const my = officer?.my_scores || {};
+      for (const it of evalItems) {
+        if (it.kind === 'computed') continue;
+        const v = my[it.id];
+        init[it.id] = v == null ? '' : String(v);
+      }
+      setScores(init);
+      const firstManual = evalItems.find(it => it.kind !== 'computed');
+      setSelectedItemId(firstManual ? firstManual.id : null);
     }
-    setScores(init);
-    const firstManual = evalItems.find(it => it.kind !== 'computed');
-    setSelectedItemId(firstManual ? firstManual.id : null);
-    // Reset whenever the active officer changes.
+    prevRef.current = { oid, es };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [officer?.officer_id]);
+  }, [officer?.officer_id, myVote?.eval_state]);
 
   const closed = officer?.done === 1;
   const serviceScore = officer?.service_score_pct != null ? Number(officer.service_score_pct) : null;
