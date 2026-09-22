@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { getOfficerScoring, saveOfficerScoring } from '../../api/scoring';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { getOfficerScoring, saveOfficerScoring, getCommitteeScoring } from '../../api/scoring';
 import { toArabicDigits, toWesternDigits, formatDate } from '../../utils/format';
 
 // Per-officer «مسير الخدمة» entry (نظير OFFICERS_TAKYEEM): each component shows its imported data,
@@ -127,12 +127,15 @@ export default function ServiceScoreEntry() {
             {o.akdam_no != null ? ` — أقدمية ${toArabicDigits(o.akdam_no)}${o.akdam_rep ? ' ' + toArabicDigits(o.akdam_rep) : ''}` : ''}
           </p>
         </div>
-        <Link
-          to={committeeId ? `/admin/committees/${committeeId}?tab=service-scores` : `/admin/officers/${officerId}`}
-          className="btn-secondary text-sm"
-        >
-          {committeeId ? 'العودة للجنة' : 'العودة لملف الضابط'}
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          {committeeId && <OfficerQuickSearch committeeId={committeeId} currentOfficerId={officerId} />}
+          <Link
+            to={committeeId ? `/admin/committees/${committeeId}?tab=service-scores` : `/admin/officers/${officerId}`}
+            className="btn-secondary text-sm"
+          >
+            {committeeId ? 'العودة للجنة' : 'العودة لملف الضابط'}
+          </Link>
+        </div>
       </div>
 
       {msg && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm mb-3">{msg}</div>}
@@ -228,6 +231,84 @@ function MiniTable({ rows, cols, empty, dateKeys = [] }: {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// بحث سريع بالاسم بين ضباط اللجنة للانتقال إلى شاشة درجات أي ضابط دون العودة للقائمة.
+function OfficerQuickSearch({ committeeId, currentOfficerId }: { committeeId: string; currentOfficerId: number }) {
+  const navigate = useNavigate();
+  const [officers, setOfficers] = useState<any[]>([]);
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getCommitteeScoring(Number(committeeId))
+      .then((data) => setOfficers(data.officers || []))
+      .catch(() => setOfficers([]));
+  }, [committeeId]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  // Forgiving Arabic match: drop tashkeel/tatweel and normalise alef/ya/ta-marbuta.
+  const norm = (s: string) => (s || '')
+    .replace(/[ـًٌٍَُِّْ]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .toLowerCase()
+    .trim();
+
+  const nq = norm(q);
+  const results = nq
+    ? officers.filter((o) => norm(`${o.rank_name || ''} ${o.officer_name || ''}`).includes(nq)).slice(0, 10)
+    : [];
+
+  const go = (id: number) => {
+    setQ('');
+    setOpen(false);
+    navigate(`/admin/officers/${id}/service-score?committee=${committeeId}`);
+  };
+
+  return (
+    <div ref={boxRef} className="relative w-full sm:w-72">
+      <input
+        value={q}
+        onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder="بحث باسم الضابط..."
+        className="input-field py-1 w-full text-sm"
+      />
+      {open && q.trim() !== '' && (
+        <div className="absolute z-20 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+          {results.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-400">لا يوجد ضابط بهذا الاسم</div>
+          ) : (
+            results.map((o) => (
+              <button
+                key={o.officer_id}
+                type="button"
+                onClick={() => go(o.officer_id)}
+                className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-right text-sm hover:bg-blue-50 ${
+                  o.officer_id === currentOfficerId ? 'bg-blue-50' : ''
+                }`}
+              >
+                <span className="truncate">{toArabicDigits([o.rank_name, o.officer_name].filter(Boolean).join(' / '))}</span>
+                <span className="shrink-0 text-xs text-gray-400">
+                  م {toArabicDigits(o.serial)}{o.has_score ? ' • ✓' : ''}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
