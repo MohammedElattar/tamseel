@@ -235,7 +235,7 @@ function MiniTable({ rows, cols, empty, dateKeys = [] }: {
   );
 }
 
-// بحث سريع بالاسم بين ضباط اللجنة للانتقال إلى شاشة درجات أي ضابط دون العودة للقائمة.
+// بحث سريع بالاسم أو الأقدمية بين ضباط اللجنة للانتقال إلى شاشة درجات أي ضابط دون العودة للقائمة.
 function OfficerQuickSearch({ committeeId, currentOfficerId }: { committeeId: string; currentOfficerId: number }) {
   const navigate = useNavigate();
   const [officers, setOfficers] = useState<any[]>([]);
@@ -266,10 +266,24 @@ function OfficerQuickSearch({ committeeId, currentOfficerId }: { committeeId: st
     .toLowerCase()
     .trim();
 
+  // With digits -> seniority search (same logic as «ترتيب العرض»: partial akdam_no + optional rep
+  // letter, e.g. «٥ أ»); otherwise a name search.
+  const digits = q.replace(/[^\d]/g, '');
   const nq = norm(q);
-  const results = nq
-    ? officers.filter((o) => norm(`${o.rank_name || ''} ${o.officer_name || ''}`).includes(nq)).slice(0, 10)
-    : [];
+  const seniorityStr = (o: any) =>
+    [String(o.akdam_no ?? ''), String(o.akdam_rep ?? '').trim()].filter(Boolean).join(' ');
+  let results: any[] = [];
+  if (digits) {
+    const rep = q.replace(/[\d\s]/g, '').trim();
+    results = officers.filter((o) => {
+      if (seniorityStr(o).includes(q.trim())) return true;
+      if (!String(o.akdam_no ?? '').includes(digits)) return false;
+      if (rep && !String(o.akdam_rep ?? '').trim().includes(rep)) return false;
+      return true;
+    }).slice(0, 10);
+  } else if (nq) {
+    results = officers.filter((o) => norm(`${o.rank_name || ''} ${o.officer_name || ''}`).includes(nq)).slice(0, 10);
+  }
 
   const go = (id: number) => {
     setQ('');
@@ -280,16 +294,16 @@ function OfficerQuickSearch({ committeeId, currentOfficerId }: { committeeId: st
   return (
     <div ref={boxRef} className="relative w-full sm:w-72">
       <input
-        value={q}
-        onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+        value={toArabicDigits(q)}
+        onChange={(e) => { setQ(toWesternDigits(e.target.value)); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        placeholder="بحث باسم الضابط..."
+        placeholder="بحث بالاسم أو الأقدمية..."
         className="input-field py-1 w-full text-sm"
       />
       {open && q.trim() !== '' && (
         <div className="absolute z-20 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
           {results.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-400">لا يوجد ضابط بهذا الاسم</div>
+            <div className="px-3 py-2 text-sm text-gray-400">لا يوجد ضابط مطابق</div>
           ) : (
             results.map((o) => (
               <button
@@ -302,7 +316,7 @@ function OfficerQuickSearch({ committeeId, currentOfficerId }: { committeeId: st
               >
                 <span className="truncate">{toArabicDigits([o.rank_name, o.officer_name].filter(Boolean).join(' / '))}</span>
                 <span className="shrink-0 text-xs text-gray-400">
-                  م {toArabicDigits(o.serial)}{o.has_score ? ' • ✓' : ''}
+                  {o.akdam_no != null ? `أقدمية ${toArabicDigits(o.akdam_no)}${o.akdam_rep ? ' ' + toArabicDigits(o.akdam_rep) : ''} • ` : ''}م {toArabicDigits(o.serial)}{o.has_score ? ' ✓' : ''}
                 </span>
               </button>
             ))
