@@ -150,7 +150,6 @@ export default function Login() {
                       className="text-right border border-dashed border-gray-300 rounded-xl p-3 hover:border-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
                     >
                       <div className="font-bold text-gray-700 truncate">{toArabicDigits(g.display_name)}</div>
-                      <div className="text-xs text-gray-400 truncate">دخول للاطلاع فقط بدون تصويت</div>
                       {busyId === g.id && <div className="text-xs text-blue-600 mt-1">جاري الدخول...</div>}
                     </button>
                   ))}

@@ -116,7 +116,6 @@ export default function TamseelVotingScreen({
     }
   };
   const selectedManual = evalItems.find(it => it.id === selectedItemId && it.kind !== 'computed') || null;
-  const scoredCount = manualItems.filter(it => scores[it.id] !== '' && scores[it.id] != null).length;
 
   const handleSave = () => {
     const payload = evalItems
@@ -183,8 +182,7 @@ export default function TamseelVotingScreen({
                       return (
                         <tr key={it.id} className={`border-t border-slate-200 ${computed ? 'bg-emerald-50' : ''}`}>
                           <td className="px-2 py-1">
-                            {it.name}
-                            {computed && <span className="mr-1 text-[10px] text-emerald-700">(محسوب)</span>}
+                        {it.name}
                           </td>
                           <td className="text-center px-2 py-1">{toArabicDigits(it.max_degree)}</td>
                           <td className="text-center px-2 py-1">
@@ -247,52 +245,38 @@ export default function TamseelVotingScreen({
               <div className="text-2xl font-bold text-blue-800">{toArabicDigits(average)}٪</div>
             </div>
 
-            {!closed && (
+            {!closed && selectedManual && (
               <div className="rounded-lg border border-slate-300 p-2">
-                {selectedManual ? (
-                  <>
-                    <div className="text-xs font-bold text-slate-600 mb-1 text-center">
-                      {selectedManual.name}
-                      <span className="text-slate-400"> (حد أقصى {toArabicDigits(selectedManual.max_degree)})</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {allowedValues(Number(selectedManual.max_degree)).map(v => {
-                        const active = String(v) === (scores[selectedManual.id] ?? '');
-                        return (
-                          <button
-                            key={v}
-                            type="button"
-                            disabled={saving}
-                            onClick={() => pickValue(selectedManual, v)}
-                            className={`aspect-square flex items-center justify-center rounded text-lg font-bold border disabled:opacity-50 ${
-                              active ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-800'
-                            }`}
-                          >
-                            {toArabicDigits(v)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={() => pickValue(selectedManual, null)}
-                      className="w-full mt-1 py-1 rounded text-xs border border-slate-300 text-slate-500 hover:bg-slate-100"
-                    >
-                      مسح
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-xs text-slate-400 text-center py-3">اختر بنداً من الجدول لإدخال درجته</div>
-                )}
-              </div>
-            )}
-
-            {!closed && manualItems.length > 0 && (
-              <div className={`text-center text-xs font-bold ${scoredCount === manualItems.length ? 'text-green-700' : 'text-slate-500'}`}>
-                {scoredCount === manualItems.length
-                  ? 'اكتمل إدخال جميع البنود ✓'
-                  : `تم إدخال ${toArabicDigits(scoredCount)} من ${toArabicDigits(manualItems.length)} بنود`}
+                <div className="text-xs font-bold text-slate-600 mb-1 text-center">
+                  {selectedManual.name}
+                  <span className="text-slate-400"> (حد أقصى {toArabicDigits(selectedManual.max_degree)})</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {allowedValues(Number(selectedManual.max_degree)).map(v => {
+                    const active = String(v) === (scores[selectedManual.id] ?? '');
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        disabled={saving}
+                        onClick={() => pickValue(selectedManual, v)}
+                        className={`aspect-square flex items-center justify-center rounded text-lg font-bold border disabled:opacity-50 ${
+                          active ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-800'
+                        }`}
+                      >
+                        {toArabicDigits(v)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => pickValue(selectedManual, null)}
+                  className="w-full mt-1 py-1 rounded text-xs border border-slate-300 text-slate-500 hover:bg-slate-100"
+                >
+                  مسح
+                </button>
               </div>
             )}
             {!closed && (

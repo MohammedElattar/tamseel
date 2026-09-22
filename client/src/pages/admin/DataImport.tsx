@@ -196,13 +196,8 @@ export default function DataImport() {
 
       <div className="card space-y-4 mb-4">
         <p className="text-sm text-gray-600 leading-relaxed">
-          الصق محتوى ملف Oracle SQL (عبارات <code dir="ltr">INSERT</code>) أو اختر ملف <code>.sql</code>.
-          تُقبل جداول بيانات الضباط وأعضاء اللجنة الموضّحة في الدليل بالأسفل فقط. زر <span className="font-bold">«استيراد»</span>
-          يمسح كل جدول مطابق ويُعيد تحميله بالكامل، بينما زر <span className="font-bold">«اضافة بدون حذف»</span> يضيف
-          بيانات الملف إلى الجداول المطابقة دون حذف أو مسح أي بيانات قائمة (ويُعاد أي خطأ في التنفيذ كما هو). في
-          الحالتين تُتجاهَل أي جداول أو أعمدة أخرى، والجداول المرجعية (الرتب، فئات اللجان، أنواع الطعون…) مُهيّأة
-          تلقائياً ولا تحتاج استيراداً. الملفات المُرمَّزة بترميز <code dir="ltr">Windows-1256</code>
-          تُقرأ تلقائياً عند اختيارها كملف.
+          الصق عبارات <code dir="ltr">INSERT</code> من ملف Oracle SQL أو اختر ملف <code>.sql</code>.
+          «استيراد» يمسح الجدول ويعيد تحميله بالكامل، و«اضافة بدون حذف» يضيف دون مسح.
         </p>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -271,9 +266,7 @@ export default function DataImport() {
         {guideOpen && (
           <div className="border-t border-gray-200">
             <p className="border-b border-gray-200 bg-blue-50/40 px-4 py-3 text-sm leading-relaxed text-gray-600">
-              لكل جدول خطوتان: <span className="font-bold">(١)</span> شغّل «استعلام Oracle» على الجهاز الحي وصدّر ناتجه
-              كعبارات <code dir="ltr">INSERT</code>، ثم <span className="font-bold">(٢)</span> الصق الناتج بالأعلى أو ارفعه
-              كملف <code>.sql</code>. يُمسح الجدول المطابق ويُعاد تحميله بالكامل، وتُتجاهَل الجداول والأعمدة غير المعروفة.
+              لكل جدول: شغّل «استعلام Oracle» وصدّر ناتجه كعبارات <code dir="ltr">INSERT</code>، ثم الصقه بالأعلى أو ارفعه كملف <code>.sql</code>.
             </p>
 
             <div className="grid lg:grid-cols-[18rem_minmax(0,1fr)]">
@@ -403,15 +396,8 @@ export default function DataImport() {
         <div>
           <h3 className="font-bold text-gray-800 mb-1">استيراد صور الضباط</h3>
           <p className="text-sm text-gray-600 leading-relaxed">
-            اختر المجلد الرئيسي للصور دفعة واحدة (مثلاً <code dir="ltr">photos</code>). بداخله
-            <span className="font-bold"> مجلد فرعي لكل ضابط باسم المعرّف (id)</span>، ويحتوي كل مجلد على صورتين:
-            <span className="font-bold"> الصورة الشخصية</span> (أي اسم وأي امتداد صورة:
-            <code dir="ltr"> jpg, jpeg, png, gif, webp, bmp</code>)، و<span className="font-bold">الصورة العائلية</span>
-            على أن يحتوي اسم ملفها على كلمة <code dir="ltr">family</code> (أو «عائلية»). مثال:
-            <code dir="ltr"> photos/12345/1121.png</code> (شخصية) و <code dir="ltr">photos/12345/family.jpg</code> (عائلية).
-            صور <code dir="ltr">TIFF</code> (حتى لو كان امتدادها <code dir="ltr">jpg</code>) تُحوَّل تلقائياً إلى
-            <code dir="ltr"> JPEG</code>؛ أما <code dir="ltr">HEIC</code> فيلزم تحويلها يدوياً.
-            تُطابق الصور بالضباط عبر المعرّف (id) وتبقى محفوظة بعد إعادة استيراد بيانات الضباط.
+            اختر مجلد الصور: مجلد فرعي لكل ضابط باسم المعرّف (id)، بداخله الصورة الشخصية وصورة عائلية يحتوي اسمها كلمة <code dir="ltr">family</code>.
+            صور <code dir="ltr">TIFF</code> تُحوَّل تلقائياً، و<code dir="ltr">HEIC</code> يلزم تحويلها يدوياً.
           </p>
         </div>
 

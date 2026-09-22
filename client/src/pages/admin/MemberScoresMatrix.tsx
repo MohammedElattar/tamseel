@@ -260,7 +260,7 @@ export default function MemberScoresMatrix() {
                     <th key={it.id} className="p-2 text-center">
                       {it.name}
                       <span className="block text-[10px] font-normal text-gray-400">
-                        {toArabicDigits(it.max_degree)}{it.kind === 'computed' ? ' • محسوب' : ''}
+                        {toArabicDigits(it.max_degree)}
                       </span>
                     </th>
                   ))}
