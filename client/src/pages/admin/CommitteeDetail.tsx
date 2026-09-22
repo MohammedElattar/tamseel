@@ -957,8 +957,7 @@ export default function CommitteeDetail() {
 
       {activeTab === 'items' && (
         <div>
-          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-            <p className="text-sm text-gray-500">بنود التقييم لهذه اللجنة — عدّل الاسم والحد الأقصى. «مسير الخدمة» و«لغة إنجليزية» بندان محسوبان يُدخلان من الإدارة (درجات مسير الخدمة).</p>
+          <div className="flex items-center justify-end mb-4 gap-2 flex-wrap">
             <button onClick={reloadItemsTemplate} className="btn-secondary text-sm">تحميل البنود (من القالب)</button>
           </div>
           {itemsMsg && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm mb-3">{itemsMsg}</div>}
@@ -1556,10 +1555,6 @@ export default function CommitteeDetail() {
         <CommitteeServiceScores committeeId={committeeId} />
       )}
 
-      {activeTab !== 'members' && activeTab !== 'officers' && activeTab !== 'session' &&
-        activeTab !== 'reports' && activeTab !== 'registration' && activeTab !== 'service-scores' && (
-        <div className="card text-center py-10 text-gray-400">قيد التطوير</div>
-      )}
     </div>
   );
 }

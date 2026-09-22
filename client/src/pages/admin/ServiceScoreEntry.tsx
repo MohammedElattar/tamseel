@@ -158,9 +158,6 @@ export default function ServiceScoreEntry() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h3 className="font-bold text-gray-800">لغة إنجليزية</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              درجة اللغة الإنجليزية — تُدخل من الإدارة وتظهر للأعضاء ضمن بنود التقييم للقراءة فقط (حد أقصى {toArabicDigits(100)}).
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-500">الدرجة</label>

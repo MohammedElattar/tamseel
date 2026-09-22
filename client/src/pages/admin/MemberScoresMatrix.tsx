@@ -313,12 +313,6 @@ export default function MemberScoresMatrix() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            نسبة العضو = مجموع درجاته على البنود (شاملةً البنود المحسوبة) ÷ إجمالي الدرجات ({toArabicDigits(totalMax)}).
-            {editMode
-              ? ' البنود المحسوبة (مسير الخدمة / لغة إنجليزية) تُدخل من شاشة درجات مسير الخدمة.'
-              : ' المتوسط العام يُحسب لمن أتمّ التقييم فقط.'}
-          </p>
         </>
       )}
     </div>

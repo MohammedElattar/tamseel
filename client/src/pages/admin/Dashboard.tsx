@@ -72,12 +72,10 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 gap-4">
         <Link to="/admin/committees" className="card hover:shadow-md transition-shadow">
-          <h3 className="font-bold mb-1">اللجان</h3>
-          <p className="text-sm text-gray-500">عرض وإدارة جميع اللجان</p>
+          <h3 className="font-bold">اللجان</h3>
         </Link>
         <Link to="/admin/officers" className="card hover:shadow-md transition-shadow">
-          <h3 className="font-bold mb-1">الضباط</h3>
-          <p className="text-sm text-gray-500">عرض بيانات الضباط</p>
+          <h3 className="font-bold">الضباط</h3>
         </Link>
       </div>
     </div>

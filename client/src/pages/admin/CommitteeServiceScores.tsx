@@ -30,9 +30,7 @@ export default function CommitteeServiceScores({ committeeId }: { committeeId: n
 
   if (!total) {
     return (
-      <div className="card text-center py-10 text-gray-400">
-        لا يوجد ضباط في هذه اللجنة — حمّل الضباط أولاً من تبويب «بيانات الضباط».
-      </div>
+      <div className="card text-center py-10 text-gray-400">لا يوجد ضباط في هذه اللجنة</div>
     );
   }
 
@@ -41,9 +39,6 @@ export default function CommitteeServiceScores({ committeeId }: { committeeId: n
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <h3 className="font-bold text-gray-800">درجات مسير الخدمة</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            أدخل درجات مسير الخدمة لكل ضابط. النسبة تُحسب من إجمالي {toArabicDigits(totalMax)} درجة.
-          </p>
         </div>
         <div className="text-sm whitespace-nowrap">
           <span className="text-gray-500">تم تقييم </span>
