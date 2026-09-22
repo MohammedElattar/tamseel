@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>المرحلة ٢ — إدخال درجات مسير الخدمة</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Tahoma", "Cairo", system-ui, sans-serif; background:#f1f5f9; color:#0f172a; }
+  :where(.grid, .flex) > * { min-width: 0; }
+  :where(p, h1, h2, h3, h4, li, td, th, .badge) { overflow-wrap: anywhere; }
+  svg { max-width: 100%; height: auto; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:0.75rem; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .badge { display:inline-flex; align-items:center; gap:.25rem; padding:.15rem .55rem; border-radius:9999px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; direction:ltr; unicode-bidi:isolate; font-size:.8rem; }
+  th, td { text-align:right; padding:.45rem .7rem; }
+  .inp { display:inline-block; min-width:3.5rem; border:2px solid #ca8a04; background:#fef9c3; border-radius:.35rem; padding:.1rem .5rem; font-weight:700; color:#854d0e; text-align:center; }
+</style>
+</head>
+<body>
+
+<header class="bg-blue-900 text-white shadow-lg">
+  <div class="max-w-6xl mx-auto px-5 py-4">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold">المرحلة ٢ — إدخال درجات «مسير الخدمة»</h1>
+        <p class="text-blue-200 text-sm mt-1">مُحدّثة حسب ملاحظتك: لا حسابات درجات — تُدخَل الدرجة يدوياً تحت كل جدول، ويُحسب المتوسط والنسبة فقط</p>
+      </div>
+      <span class="badge bg-blue-700 text-white">معاينة قبل كتابة أي كود</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-5 py-6 space-y-8">
+
+  <section class="card p-4 border-r-4 border-amber-400">
+    <p class="text-sm text-slate-700"><b>ما تغيّر بعد ملاحظتك:</b> أزلت محرك الحساب وجداول تحويل «البيانات → درجة».
+    بدلاً من ذلك: تُعرض بيانات كل مكوّن، وتحته <span class="inp">حقل إدخال</span> يكتب فيه المُقيّم الدرجة يدوياً (كالنظام القديم).
+    النظام يحسب فقط <b>المتوسطات</b> (متوسط تقارير الكفاءة) و<b>النسبة النهائية</b>.</p>
+  </section>
+
+  <!-- Flow -->
+  <section id="goal" class="card p-5">
+    <h2 class="text-lg font-bold mb-1 text-blue-900">الفكرة (مبسّطة)</h2>
+    <p class="text-sm text-slate-600 mb-4">
+      لكل ضابط، تُعرض بيانات ٧ مكوّنات (الوظائف، التأهيل، تقارير الكفاءة، خدمة التشكيلات، الأوسمة، البعثات، الجزاءات).
+      يكتب المُقيّم <b>درجة</b> كل مكوّن يدوياً (ضمن حده الأقصى). ثم: النسبة = مجموع الدرجات ÷ المجموع الأقصى (≈١٠٥٠) × ١٠٠،
+      وتظهر كبند «مسير الخدمة» في بطاقة التصويت.
+    </p>
+    <svg viewBox="0 0 820 150" role="img" aria-labelledby="f2" class="w-full">
+      <title id="f2">raw shown -> manual score per component -> sum/total -> %</title>
+      <rect x="15" y="45" width="180" height="60" rx="8" fill="#f0fdf4" stroke="#16a34a"/>
+      <text x="105" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#166534">تُعرض بيانات المكوّن</text>
+      <text x="105" y="88" text-anchor="middle" font-size="9.5" fill="#166534">الوظائف/الكفاءة/التشكيلات…</text>
+      <line x1="195" y1="75" x2="240" y2="75" stroke="#64748b" stroke-width="2.5" marker-end="url(#a2)"/>
+      <rect x="240" y="42" width="190" height="66" rx="10" fill="#fef9c3" stroke="#ca8a04"/>
+      <text x="335" y="66" text-anchor="middle" font-size="11.5" font-weight="800" fill="#854d0e">المُقيّم يُدخل الدرجة</text>
+      <text x="335" y="84" text-anchor="middle" font-size="9.5" fill="#854d0e">حقل تحت كل جدول (ضمن الحد الأقصى)</text>
+      <text x="335" y="98" text-anchor="middle" font-size="9" fill="#854d0e">+ يُعرض المتوسط تلقائياً</text>
+      <line x1="430" y1="75" x2="475" y2="75" stroke="#64748b" stroke-width="2.5" marker-end="url(#a2)"/>
+      <rect x="475" y="48" width="170" height="54" rx="10" fill="#eff6ff" stroke="#3b82f6"/>
+      <text x="560" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#1e3a8a">مجموع ÷ ١٠٥٠</text>
+      <text x="560" y="88" text-anchor="middle" font-size="9.5" fill="#1e3a8a">حفظ في officer_service_score</text>
+      <line x1="645" y1="75" x2="690" y2="75" stroke="#64748b" stroke-width="2.5" marker-end="url(#a2)"/>
+      <rect x="690" y="50" width="115" height="50" rx="10" fill="#fef9c3" stroke="#ca8a04"/>
+      <text x="747" y="72" text-anchor="middle" font-size="11.5" font-weight="800" fill="#854d0e">مسير الخدمة %</text>
+      <text x="747" y="89" text-anchor="middle" font-size="9" fill="#854d0e">بند التصويت</text>
+      <defs><marker id="a2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"/></marker></defs>
+    </svg>
+  </section>
+
+  <!-- Data model -->
+  <section id="model" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200">
+      <h2 class="font-bold text-slate-800">جدولان فقط (بدل التسعة السابقة)</h2>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4 p-5 text-sm">
+      <div class="rounded-lg border border-slate-200 p-3">
+        <h3 class="font-bold text-slate-800 mono">score_basis  (إعداد لمرة واحدة: أسس التقييم)</h3>
+        <p class="text-xs text-slate-600 mb-2">الحد الأقصى لدرجة كل مكوّن؛ مجموعها = المجموع الأقصى (≈١٠٥٠).</p>
+        <ul class="text-xs space-y-1 mono text-slate-700">
+          <li>component  (jobs, tahil, kafaa, tashkeelat, awsama, ba3asat, gaza)</li>
+          <li>label      (اسم عربي)</li>
+          <li>max_degree (الدرجة القصوى)</li>
+        </ul>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-3">
+        <h3 class="font-bold text-slate-800 mono">officer_service_score  (لكل ضابط)</h3>
+        <p class="text-xs text-slate-600 mb-2">الدرجات المُدخَلة يدوياً + المتوسط المحسوب + المجموع والنسبة.</p>
+        <ul class="text-xs space-y-1 mono text-slate-700">
+          <li>officer_id</li>
+          <li>jobs, tahil, kafaa, tashkeelat, awsama, ba3asat, gaza  ← إدخال يدوي</li>
+          <li>kafaa_avg  ← محسوب (متوسط تقارير الكفاءة)</li>
+          <li>total, pct ← محسوب (المجموع والنسبة)</li>
+        </ul>
+      </div>
+    </div>
+    <p class="px-5 pb-4 text-xs text-slate-400">لا جداول تحويل (score_jobs/score_tashkeelat…) ولا محرك اشتقاق من البيانات الخام — أُلغيت.</p>
+  </section>
+
+  <!-- Screen sketch -->
+  <section id="screen" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200">
+      <h2 class="font-bold text-slate-800">شاشة إدخال الدرجات (نظير OFFICERS_TAKYEEM)</h2>
+      <p class="text-xs text-slate-500 mt-0.5">لكل مكوّن: بياناته المستوردة + المتوسط (إن وُجد) + حقل إدخال الدرجة. أسفل الشاشة: المجموع والنسبة.</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-3 p-5 text-xs">
+      <div class="rounded-lg border border-slate-200 p-3"><b>الوظائف</b> — تُعرض الوظائف السابقة (officer_holder_wazayef)، وتحتها <span class="inp">الدرجة</span> (حد أقصى ٢٠٠).</div>
+      <div class="rounded-lg border border-slate-200 p-3"><b>تقارير الكفاءة</b> — تُعرض التقارير + <b>المتوسط محسوب تلقائياً</b>، وتحتها <span class="inp">الدرجة</span> (حد أقصى ١٧٠).</div>
+      <div class="rounded-lg border border-slate-200 p-3"><b>خدمة التشكيلات</b> — تُعرض المدة/النسبة، وتحتها <span class="inp">الدرجة</span> (حد أقصى ١٥٠).</div>
+      <div class="rounded-lg border border-slate-200 p-3"><b>التأهيل</b> — يُعرض (وربما الدرجة المستوردة كقيمة ابتدائية)، وتحته <span class="inp">الدرجة</span> (حد أقصى ١٨٠).</div>
+      <div class="rounded-lg border border-slate-200 p-3"><b>الأوسمة والأنواط</b> — تُعرض القائمة، وتحتها <span class="inp">الدرجة</span> (حد أقصى ١٤٠).</div>
+      <div class="rounded-lg border border-slate-200 p-3"><b>البعثات</b> — تُعرض القائمة، وتحتها <span class="inp">الدرجة</span> (حد أقصى ١٣٠).</div>
+      <div class="rounded-lg border border-slate-200 p-3"><b>المحاكمات والجزاءات</b> — تُعرض القائمة، وتحتها <span class="inp">الدرجة</span> (حد أقصى ٨٠).</div>
+      <div class="rounded-lg border border-blue-300 bg-blue-50 p-3"><b>الإجمالي</b> — المجموع = ∑ الدرجات، والنسبة = المجموع ÷ ١٠٥٠ × ١٠٠ → «مسير الخدمة %».</div>
+    </div>
+  </section>
+
+  <!-- Deliverables -->
+  <section id="deliverables" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-3">مخرجات المرحلة ٢ (مبسّطة)</h2>
+    <ul class="space-y-2 text-sm text-slate-700 list-disc pr-5">
+      <li>جدول <span class="mono">score_basis</span> (أسس/حدود قصوى) + شاشة إعداده لمرة واحدة.</li>
+      <li>جدول <span class="mono">officer_service_score</span> (درجات مُدخَلة + متوسط + مجموع/نسبة) + هجراته.</li>
+      <li>شاشة «إدخال درجات مسير الخدمة» لكل ضابط: عرض البيانات + حقل درجة تحت كل مكوّن + حفظ.</li>
+      <li>حساب المتوسطات فقط (متوسط تقارير الكفاءة) + المجموع والنسبة تلقائياً.</li>
+      <li>مسار <span class="mono">scoring.ts</span>: قراءة/حفظ الدرجات + أسس التقييم.</li>
+      <li>(لا جداول تحويل، لا محرك اشتقاق — أبسط وأسرع.)</li>
+    </ul>
+  </section>
+
+  <!-- Questions -->
+  <section id="questions" class="card p-5 space-y-6">
+    <h2 class="text-lg font-bold text-blue-900">أسئلة سريعة قبل التنفيذ</h2>
+
+    <form data-lavish-question="q-who" class="space-y-2"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('w'); if(v) window.lavish.queuePrompt('من يُدخل الدرجات: '+v,{tag:'choice',data:{question:'who-enters',answer:v}});">
+      <p class="font-bold text-sm">أ) من يُدخل درجات مسير الخدمة؟</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="w" value="admin" class="mt-1"> المدير/الإدارة قبل اللجنة، وتظهر النسبة للأعضاء كبند جاهز <span class="badge" style="background:#fef9c3;color:#854d0e">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="w" value="member" class="mt-1"> كل عضو يُدخلها أثناء التصويت</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+
+    <form data-lavish-question="q-avgs" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('a'); if(v) window.lavish.queuePrompt('المتوسطات المحسوبة: '+v,{tag:'choice',data:{question:'averages',answer:v}});">
+      <p class="font-bold text-sm">ب) أي متوسطات تُحسب تلقائياً؟</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="a" value="kafaa" class="mt-1"> متوسط تقارير الكفاءة فقط <span class="badge" style="background:#fef9c3;color:#854d0e">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="a" value="more" class="mt-1"> متوسطات أخرى أيضاً (سأحددها في تعليق)</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+
+    <form data-lavish-question="q-tahil" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('t'); if(v) window.lavish.queuePrompt('درجة التأهيل: '+v,{tag:'choice',data:{question:'tahil',answer:v}});">
+      <p class="font-bold text-sm">ج) درجة التأهيل</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="t" value="prefill" class="mt-1"> تُعبأ ابتدائياً من الدرجة المستوردة (<span class="mono">officer_qualification.grade</span>) وتبقى قابلة للتعديل <span class="badge" style="background:#fef9c3;color:#854d0e">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="t" value="manual" class="mt-1"> إدخال يدوي فارغ مثل باقي المكوّنات</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+  </section>
+
+  <section id="approve" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-2">الموافقة على المرحلة ٢ (المبسّطة)</h2>
+    <button type="button" data-lavish-action
+      onclick="window.lavish.queuePrompt('اعتمد المرحلة ٢ المبسّطة (إدخال يدوي للدرجات + متوسطات فقط) وابدأ التنفيذ.',{tag:'approve',text:'اعتماد المرحلة ٢ المبسّطة'});"
+      class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold text-sm">اعتماد المرحلة ٢ والبدء</button>
+  </section>
+
+  <p class="text-center text-xs text-slate-400 pt-2">لو ضبطت الفهم صح، اعتمد. غير كده صحّح لي في رسالة.</p>
+</main>
+</body>
+</html>

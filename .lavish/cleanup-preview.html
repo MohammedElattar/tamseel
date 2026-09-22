@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>تنظيف الشاشات غير المرتبطة — المرحلة صفر</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Tahoma", "Cairo", system-ui, sans-serif; background:#f1f5f9; color:#0f172a; }
+  :where(.grid, .flex) > * { min-width: 0; }
+  :where(p, h1, h2, h3, h4, li, td, th, .badge) { overflow-wrap: anywhere; }
+  svg { max-width: 100%; height: auto; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:0.75rem; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .badge { display:inline-flex; align-items:center; gap:.25rem; padding:.1rem .5rem; border-radius:9999px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; direction:ltr; unicode-bidi:isolate; font-size:.8rem; }
+  th, td { text-align:right; }
+  .del { background:#fef2f2; }
+  .edit { background:#fffbeb; }
+  .keep { background:#f0fdf4; }
+</style>
+</head>
+<body>
+
+<!-- ===== Top bar (matches admin navy header) ===== -->
+<header class="bg-blue-900 text-white shadow-lg">
+  <div class="max-w-6xl mx-auto px-5 py-4">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold">المرحلة صفر — تنظيف الشاشات غير المرتبطة</h1>
+        <p class="text-blue-200 text-sm mt-1">تحويل نسخة «إدارة» إلى منظومة لجنة واحدة: <span class="font-bold text-white">تقييم ضباط التمثيل العسكري</span></p>
+      </div>
+      <span class="badge bg-blue-700 text-white">معاينة قبل كتابة أي كود</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-5 py-6 space-y-8">
+
+  <!-- Design source note -->
+  <p class="text-xs text-slate-500 border-r-4 border-slate-300 pr-3">
+    مصدر التصميم: صُمّمت هذه المعاينة بنظام تصميم المشروع نفسه (الكحلي للمدير / الأخضر للعضو، عربي RTL) عبر Tailwind CDN — لتظهر مألوفة لك.
+  </p>
+
+  <!-- ===== Goal + before/after ===== -->
+  <section id="goal" class="card p-5">
+    <h2 class="text-lg font-bold mb-1 text-blue-900">الهدف من هذه المرحلة</h2>
+    <p class="text-sm text-slate-600 mb-4">
+      النظام الحالي (المنسوخ من «إدارة») يدعم <b>نوعين</b> من اللجان: التجديد/الترقي (tagdded) والإدارية/القضائية (edarya) مع «أسباب العرض» (ta3n).
+      مشروعك <b>نوع واحد فقط</b>. هذه المرحلة تحذف كل ما يخص النوع الإداري/القضائي و«أسباب العرض» حتى تبقى قاعدة نظيفة نبني عليها.
+      <b>لن يُكتب أي كود قبل موافقتك على هذه القائمة.</b>
+    </p>
+
+    <svg viewBox="0 0 760 210" role="img" aria-labelledby="ba-title" class="w-full">
+      <title id="ba-title">قبل: نوعان — بعد: نوع واحد</title>
+      <!-- before -->
+      <text x="180" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#334155">قبل</text>
+      <rect x="30" y="35" width="300" height="150" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+      <rect x="50" y="55" width="120" height="46" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
+      <text x="110" y="83" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">التجديد/الترقي</text>
+      <rect x="190" y="55" width="120" height="46" rx="8" fill="#fee2e2" stroke="#ef4444"/>
+      <text x="250" y="76" text-anchor="middle" font-size="11.5" font-weight="700" fill="#991b1b">إدارية/قضائية</text>
+      <text x="250" y="92" text-anchor="middle" font-size="10" fill="#991b1b">(يُحذف)</text>
+      <rect x="50" y="115" width="260" height="40" rx="8" fill="#fee2e2" stroke="#ef4444"/>
+      <text x="180" y="140" text-anchor="middle" font-size="11.5" font-weight="700" fill="#991b1b">أسباب العرض + القضايا الطبية/الأحكام (تُحذف)</text>
+
+      <!-- arrow -->
+      <line x1="345" y1="110" x2="410" y2="110" stroke="#64748b" stroke-width="2.5" marker-end="url(#ar)"/>
+      <defs><marker id="ar" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"/></marker></defs>
+
+      <!-- after -->
+      <text x="580" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#334155">بعد</text>
+      <rect x="430" y="35" width="300" height="150" rx="10" fill="#f0fdf4" stroke="#86efac"/>
+      <rect x="500" y="80" width="160" height="60" rx="10" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="580" y="108" text-anchor="middle" font-size="13" font-weight="800" fill="#166534">لجنة التمثيل العسكري</text>
+      <text x="580" y="126" text-anchor="middle" font-size="10.5" fill="#166534">نوع واحد</text>
+    </svg>
+  </section>
+
+  <!-- ===== Summary stats ===== -->
+  <section id="summary" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="card p-4 text-center">
+      <p class="text-3xl font-extrabold text-red-600">١٣</p>
+      <p class="text-xs text-slate-500 mt-1">ملف يُحذف بالكامل</p>
+    </div>
+    <div class="card p-4 text-center">
+      <p class="text-3xl font-extrabold text-red-600">٨</p>
+      <p class="text-xs text-slate-500 mt-1">جدول قاعدة بيانات يُسقط</p>
+    </div>
+    <div class="card p-4 text-center">
+      <p class="text-3xl font-extrabold text-red-600">٤ + ١</p>
+      <p class="text-xs text-slate-500 mt-1">مسار يُزال + عنصر قائمة</p>
+    </div>
+    <div class="card p-4 text-center">
+      <p class="text-3xl font-extrabold text-amber-600">~٣٣</p>
+      <p class="text-xs text-slate-500 mt-1">ملف مشترك يُنظّف</p>
+    </div>
+  </section>
+
+  <!-- ===== Legend ===== -->
+  <section class="flex flex-wrap gap-3 text-xs">
+    <span class="badge del text-red-800 border border-red-200">حذف — غير مرتبط بالمرة</span>
+    <span class="badge edit text-amber-800 border border-amber-200">تعديل — ملف مشترك نشيل منه فروع edarya</span>
+    <span class="badge keep text-green-800 border border-green-200">إبقاء — أساس نبني عليه</span>
+  </section>
+
+  <!-- ===== 1) Pages/screens to delete ===== -->
+  <section id="pages" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-red-50 border-b border-red-100">
+      <h2 class="font-bold text-red-800">١) شاشات / صفحات تُحذف بالكامل</h2>
+      <p class="text-xs text-red-700/80 mt-0.5">صفحات المدير والتقارير الخاصة بالنوع الإداري/القضائي و«أسباب العرض».</p>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-xs">
+        <tr><th class="px-4 py-2">الشاشة</th><th class="px-4 py-2">الملف</th><th class="px-4 py-2">المسار / القائمة</th></tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <tr class="del"><td class="px-4 py-2 font-bold">أسباب العرض (قائمة)</td><td class="px-4 py-2 mono">pages/admin/Ta3nTypes.tsx</td><td class="px-4 py-2 mono">/admin/ta3n-types</td></tr>
+        <tr class="del"><td class="px-4 py-2 font-bold">تعديل سبب عرض</td><td class="px-4 py-2 mono">pages/admin/Ta3nTypeEdit.tsx</td><td class="px-4 py-2 mono">/admin/ta3n-types/new · /:code</td></tr>
+        <tr class="del"><td class="px-4 py-2 font-bold">تقرير القضايا الطبية/الأحكام</td><td class="px-4 py-2 mono">pages/admin/reports/JudicalMedicalReport.tsx</td><td class="px-4 py-2 mono">/print/committee/:id/judical-medical</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ===== 2) Components/services to delete ===== -->
+  <section id="components" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-red-50 border-b border-red-100">
+      <h2 class="font-bold text-red-800">٢) مكوّنات وخدمات تُحذف بالكامل</h2>
+      <p class="text-xs text-red-700/80 mt-0.5">شاشة تصويت الإدارية، بطاقة القضية، حقول القضية، وإعدادات «أسباب العرض» على الواجهة والخادم.</p>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-xs">
+        <tr><th class="px-4 py-2">الجهة</th><th class="px-4 py-2">الملف</th><th class="px-4 py-2">الوصف</th></tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <tr class="del"><td class="px-4 py-2">واجهة</td><td class="px-4 py-2 mono">components/member/EdaryaVotingScreen.tsx</td><td class="px-4 py-2">شاشة تصويت النوع الإداري</td></tr>
+        <tr class="del"><td class="px-4 py-2">واجهة</td><td class="px-4 py-2 mono">components/member/EdaryaOfficerPanel.tsx</td><td class="px-4 py-2">لوحة بيانات القضية للعضو</td></tr>
+        <tr class="del"><td class="px-4 py-2">واجهة</td><td class="px-4 py-2 mono">components/committee/JudicialCaseModal.tsx</td><td class="px-4 py-2">نافذة إدخال القضية</td></tr>
+        <tr class="del"><td class="px-4 py-2">واجهة</td><td class="px-4 py-2 mono">components/committee/CaseFieldInput.tsx</td><td class="px-4 py-2">إدخال حقول القضية</td></tr>
+        <tr class="del"><td class="px-4 py-2">واجهة</td><td class="px-4 py-2 mono">components/committee/caseFields.ts</td><td class="px-4 py-2">تعريف حقول القضية</td></tr>
+        <tr class="del"><td class="px-4 py-2">واجهة</td><td class="px-4 py-2 mono">context/Ta3nConfigContext.tsx</td><td class="px-4 py-2">سياق إعدادات «أسباب العرض»</td></tr>
+        <tr class="del"><td class="px-4 py-2">واجهة</td><td class="px-4 py-2 mono">api/ta3nTypes.ts</td><td class="px-4 py-2">استدعاءات «أسباب العرض»</td></tr>
+        <tr class="del"><td class="px-4 py-2">خادم</td><td class="px-4 py-2 mono">routes/ta3nTypes.ts</td><td class="px-4 py-2">مسارات «أسباب العرض»</td></tr>
+        <tr class="del"><td class="px-4 py-2">خادم</td><td class="px-4 py-2 mono">services/ta3nConfigService.ts</td><td class="px-4 py-2">منطق خيارات القرار للإدارية</td></tr>
+        <tr class="del"><td class="px-4 py-2">خادم</td><td class="px-4 py-2 mono">config/ta3nDefaults.ts</td><td class="px-4 py-2">قيم «أسباب العرض» الافتراضية</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ===== 3) DB tables to drop ===== -->
+  <section id="tables" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-red-50 border-b border-red-100">
+      <h2 class="font-bold text-red-800">٣) جداول قاعدة البيانات التي تُسقط</h2>
+      <p class="text-xs text-red-700/80 mt-0.5">تُزال من <span class="mono">schema.sql</span> مع هجرة <span class="mono">DROP TABLE</span> في <span class="mono">connection.ts</span>. الأعمدة الإدارية داخل <span class="mono">committee_officers</span> تُترك معطّلة مؤقتاً (SQLite لا يحذف عموداً بسهولة).</p>
+    </div>
+    <div class="px-5 py-4 flex flex-wrap gap-2 text-xs">
+      <span class="badge del text-red-800 border border-red-200 mono">ta3n_types</span>
+      <span class="badge del text-red-800 border border-red-200 mono">ta3n_type_options</span>
+      <span class="badge del text-red-800 border border-red-200 mono">ta3n_type_fields</span>
+      <span class="badge del text-red-800 border border-red-200 mono">eval_judicial_lagna_cat</span>
+      <span class="badge del text-red-800 border border-red-200 mono">eval_judicial_ard_type</span>
+      <span class="badge del text-red-800 border border-red-200 mono">eval_judicial_ard_decision</span>
+      <span class="badge del text-red-800 border border-red-200 mono">committee_officer_ard</span>
+      <span class="badge del text-red-800 border border-red-200 mono">committee_officer_case_values</span>
+    </div>
+  </section>
+
+  <!-- ===== 4) Shared files to edit ===== -->
+  <section id="edits" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-amber-50 border-b border-amber-100">
+      <h2 class="font-bold text-amber-800">٤) ملفات مشتركة تُعدَّل (نشيل منها فروع edarya فقط)</h2>
+      <p class="text-xs text-amber-700/80 mt-0.5">هذه ليست للحذف — لازم نشيل منها الإشارات لِـ edarya/ta3n حتى يبني المشروع بعد الحذف. القائمة من فحص شامل (grep) وقد تقل عند التنفيذ.</p>
+    </div>
+    <div class="px-5 py-4 grid sm:grid-cols-2 gap-4 text-sm">
+      <div>
+        <h3 class="font-bold text-slate-700 mb-2 text-xs">الواجهة (client)</h3>
+        <ul class="space-y-1 text-xs mono text-slate-600">
+          <li>App.tsx — إزالة مسارات/مزوّد Ta3n</li>
+          <li>components/layout/AdminLayout.tsx — حذف عنصر «أسباب العرض»</li>
+          <li>components/layout/MemberLayout.tsx</li>
+          <li>pages/admin/Dashboard.tsx</li>
+          <li>pages/admin/CommitteeCreate.tsx · CommitteeList.tsx</li>
+          <li>pages/member/MemberDashboard.tsx · OfficerCvScreen.tsx</li>
+          <li>components/member/OfficerDataCard · OfficerCvContent</li>
+          <li>components/member/VoteTallyBox · MemberVotesPanel · DisplayOfficerCard · voteOptions</li>
+          <li>constants/voteTone.ts · components/VoteBreakdown.tsx</li>
+          <li>reports/DecisionsCardReport · FinalDecisionsReport · StatisticsReport</li>
+          <li>api/committees.ts · evaluations.ts · lookup.ts</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-700 mb-2 text-xs">الخادم (server)</h3>
+        <ul class="space-y-1 text-xs mono text-slate-600">
+          <li>routes/committees.ts · evaluations.ts · officers.ts · lookup.ts</li>
+          <li>services/scoringService.ts · importService.ts · backupService.ts</li>
+          <li>db/schema.sql · connection.ts · seed.ts</li>
+          <li>index.ts — إزالة تسجيل مسار ta3nTypes</li>
+        </ul>
+        <h3 class="font-bold text-green-700 mb-2 text-xs mt-4">إبقاء كأساس (نعيد استخدامه)</h3>
+        <ul class="space-y-1 text-xs mono text-green-700">
+          <li class="keep px-2 py-1 rounded">components/member/TagddedVotingScreen.tsx → أساس شاشة التمثيل</li>
+          <li class="keep px-2 py-1 rounded">OfficerCvContent · OfficerPhoto · بنية الاستيراد واللجان والمصادقة</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Open questions ===== -->
+  <section id="questions" class="card p-5 space-y-6">
+    <h2 class="text-lg font-bold text-blue-900">أسئلة قبل التنفيذ — اختر وأرسل</h2>
+
+    <form data-lavish-question="q-drop-tables" class="space-y-2"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('drop'); if(v) window.lavish.queuePrompt('قرار إسقاط الجداول: '+v,{tag:'choice',text:'الجداول: '+v,element:event.currentTarget,data:{question:'drop-tables',answer:v}});">
+      <p class="font-bold text-sm">أ) جداول edarya/ta3n في قاعدة البيانات</p>
+      <label class="flex items-center gap-2 text-sm"><input type="radio" name="drop" value="drop-now"> إسقاطها الآن بهجرة DROP TABLE <span class="badge keep text-green-800">موصى به</span></label>
+      <label class="flex items-center gap-2 text-sm"><input type="radio" name="drop" value="keep-unused"> إبقاؤها لكن غير مستخدمة</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال هذا الاختيار</button>
+    </form>
+
+    <form data-lavish-question="q-tagdded" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('tag'); if(v) window.lavish.queuePrompt('شاشة تصويت tagdded: '+v,{tag:'choice',text:'tagdded: '+v,element:event.currentTarget,data:{question:'tagdded',answer:v}});">
+      <p class="font-bold text-sm">ب) شاشة تصويت التجديد/الترقي الحالية</p>
+      <label class="flex items-center gap-2 text-sm"><input type="radio" name="tag" value="keep-as-base"> إبقاؤها كأساس نشتق منه شاشة التمثيل العسكري <span class="badge keep text-green-800">موصى به</span></label>
+      <label class="flex items-center gap-2 text-sm"><input type="radio" name="tag" value="delete-now"> حذفها الآن والبناء من الصفر</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال هذا الاختيار</button>
+    </form>
+
+    <form data-lavish-question="q-reports" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('rep'); if(v) window.lavish.queuePrompt('التقارير العامة: '+v,{tag:'choice',text:'التقارير: '+v,element:event.currentTarget,data:{question:'reports',answer:v}});">
+      <p class="font-bold text-sm">ج) التقارير العامة (أعضاء، ملخص تصويت، بطاقة قرارات، إحصائيات)</p>
+      <label class="flex items-center gap-2 text-sm"><input type="radio" name="rep" value="keep-adapt"> إبقاؤها للتكييف لاحقاً، وحذف تقرير القضايا/الطبي فقط <span class="badge keep text-green-800">موصى به</span></label>
+      <label class="flex items-center gap-2 text-sm"><input type="radio" name="rep" value="remove-all"> حذف كل التقارير الآن والبناء لاحقاً</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال هذا الاختيار</button>
+    </form>
+  </section>
+
+  <!-- ===== Confirm delete set (tracked batch) ===== -->
+  <section id="confirm" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-1">تأكيد قائمة الحذف</h2>
+    <p class="text-sm text-slate-600 mb-4">كل العناصر محددة مسبقاً. أزل التحديد عن أي عنصر تريد إبقاءه، ثم أرسل — سأنفّذ الحذف بعد موافقتك فقط.</p>
+    <form data-lavish-question="delete-set"
+      onsubmit="event.preventDefault(); const items=[...event.currentTarget.querySelectorAll('input[name=del]:checked')].map(i=>({id:i.value,label:i.dataset.label,disposition:'delete'})); window.lavish.queuePrompt('نفّذ حذف العناصر المحددة فقط، وأعطني إيصالاً عنصراً بعنصر. راجع كل مُعرّف قبل إعلان الاكتمال.',{tag:'tracked-batch',text:'حذف '+items.length+' عنصر',element:event.currentTarget,data:{items}});">
+      <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D1" data-label="Ta3nTypes.tsx" checked> صفحة أسباب العرض</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D2" data-label="Ta3nTypeEdit.tsx" checked> صفحة تعديل سبب عرض</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D3" data-label="JudicalMedicalReport.tsx" checked> تقرير القضايا الطبية</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D4" data-label="EdaryaVotingScreen.tsx" checked> شاشة تصويت الإدارية</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D5" data-label="EdaryaOfficerPanel.tsx" checked> لوحة قضية العضو</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D6" data-label="JudicialCaseModal.tsx" checked> نافذة القضية</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D7" data-label="CaseFieldInput.tsx" checked> إدخال حقول القضية</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D8" data-label="caseFields.ts" checked> تعريف حقول القضية</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D9" data-label="Ta3nConfigContext.tsx" checked> سياق أسباب العرض</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D10" data-label="api/ta3nTypes.ts" checked> API أسباب العرض</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D11" data-label="routes/ta3nTypes.ts" checked> مسار أسباب العرض (خادم)</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D12" data-label="ta3nConfigService.ts" checked> خدمة أسباب العرض</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D13" data-label="config/ta3nDefaults.ts" checked> قيم أسباب العرض الافتراضية</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="del" value="D14" data-label="8 DB tables" checked> ٨ جداول قاعدة بيانات</label>
+      </div>
+      <button type="submit" class="mt-5 px-6 py-2 rounded-lg bg-red-600 text-white font-bold text-sm">تأكيد الحذف وإرساله</button>
+    </form>
+  </section>
+
+  <!-- ===== Risks ===== -->
+  <section id="risks" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-3">ملاحظات ومخاطر</h2>
+    <ul class="space-y-2 text-sm text-slate-700 list-disc pr-5">
+      <li>الخادم يحمل قاعدة البيانات في الذاكرة ويكتبها عند كل حفظ — لازم نوقف الخادم قبل هجرة إسقاط الجداول.</li>
+      <li>SQLite لا يحذف عموداً مباشرة؛ الأعمدة الإدارية داخل <span class="mono">committee_officers</span> ستُترك معطّلة الآن وتُنظّف لاحقاً بإعادة بناء الجدول إن رغبت.</li>
+      <li>بعد الحذف نشغّل <span class="mono">npx tsc --noEmit</span> في client و server للتأكد أن كل الإشارات اتشالت والمشروع يبني.</li>
+      <li>اسم المجلد <span class="mono">tanseek</span> وملف قاعدة البيانات <span class="mono">edara.db</span> يبقيان كما هما حسب طلبك.</li>
+    </ul>
+  </section>
+
+  <p class="text-center text-xs text-slate-400 pt-2">راجع، علّق على أي صف أو عنصر، واختر إجاباتك — ثم أرسل. لن أبدأ أي حذف قبل موافقتك.</p>
+</main>
+</body>
+</html>

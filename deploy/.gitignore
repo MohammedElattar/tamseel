@@ -1,0 +1,4 @@
+# Build outputs and cached Node runtimes produced by build-offline-bundle.sh.
+# The script and templates are committed; the generated artifacts are not.
+dist/
+.cache/

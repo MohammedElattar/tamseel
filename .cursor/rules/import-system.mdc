@@ -1,0 +1,64 @@
+---
+description: SQL import system - Oracle INSERT to SQLite mapping
+globs: server/src/services/importService.ts
+alwaysApply: false
+---
+
+# SQL Import System
+
+Quarterly, the Navy provides a `.sql` file with Oracle INSERT statements. The import service parses and maps them to our SQLite schema.
+
+## Flow
+
+1. All imported tables are wiped (`DELETE FROM`)
+2. Each `INSERT INTO TABLE (cols) VALUES (vals);` is parsed
+3. Oracle table names map to SQLite via `TABLE_MAP` (e.g. `ELASASY` → `officers`, `MRTB` → `jobs`)
+4. Most columns auto-map by lowercase; `COLUMN_MAP` holds the few renames (e.g. `MILITARY_NUMBER` → `person_id`)
+5. Oracle functions handled: `TO_DATE(...)` → date string, `SYSDATE` → today, `NULL` → null
+
+## Important Oracle Tables
+
+| Oracle Table | SQLite Table | Description |
+|---|---|---|
+| `ELASASY` | `officers` | Officers — denormalized text (see below) |
+| `RANK` | `ranks` | Rank lookup |
+| `UNITS` | `units` | Unit lookup |
+| `MRTB` | `jobs` | Job/position lookup |
+| `SECURITYS` | `officer_kafaa` | تقارير الكفاءة (verbatim — see below) |
+| `GAZA` | `officer_punishments_geza` | المحاكمات/الجزاءات (verbatim, merged single text) |
+| `OFFICERS_HOLDER_WAZYEF` / `JOBS` | `officer_holder_wazayef` | الوظائف السابقة (career history) |
+| `BA3AST` | `officer_holder_paasat` | البعثات والمأموريات (verbatim — see below) |
+| `NASHRA_OFFICERS_TAKYEEM` | `takyeem_scores` | Evaluation bulletin scores |
+
+## الوظائف السابقة (previous jobs)
+
+The career-history dump arrives under two table names — `officers_holder_wazyef` and `JOBS` — both mapping to `officer_holder_wazayef`. Columns are stored **verbatim, no joins**: `OFFICER_ID, RAN_N, UNT_N, JOB_N, RAN_N_1|RAN_N_MRTB (→ ran_n_mrtb / المرتب), WASFIA_TUAHEL_TRKY (→ الوظيفة تؤهل للترقي), FROM_DATE, TO_DATE_ (→ to_date), YEAR, MONTH`. المرتب is a single column that may arrive as either `RAN_N_1` or `RAN_N_MRTB`.
+
+Note: Oracle `JOBS` here is the career history, distinct from `MRTB` → `jobs` (the job-title lookup).
+
+## الضباط (officers)
+
+`ELASASY` is now a **denormalized, pre-computed** dump (one row per officer, a single `NASHRA_DATE`) stored verbatim on `officers` with **no code joins**:
+- Identity/personal: `PER_NAME, AKDAM_NO, AKDAM_REP, AKDAMEYA, MILITARY_NUMBER (→ person_id), HEIGHT, WEIGHT, FARK_WAZN, FACULTY, MARITAL_STATUS (text), WIFE_STATUS, BOY_NO, GIRL_NO`.
+- Text where codes used to be: `FULL_RANK, UNT_N, JOB_N, SPECIALITY` (replace the rank/unit/job/spec code joins).
+- Pre-computed results: `TARAKY_C, TARAKY_TAGDEED` (promotion), `TARAKY_ESTIFA, ESTIFA_JOB` (استيفاء), `MIL_QUALIFICATION, CIVIL_QUALIFICATION, TAWSYA_KA2ED, ENTEDAB`.
+
+Only `MILITARY_NUMBER → person_id` is renamed; everything else auto-maps by lowercase. The استيفاء engine is retired — the imported `TARAKY_ESTIFA` / `ESTIFA_JOB` text is shown directly, and committee candidate loading reads these flat officers (filter `taraky_c >= 3`, ordered by `taraky_c, akdam_no`) instead of `officers_in_nashra`.
+
+## تقارير الكفاءة (efficiency reports)
+
+`SECURITYS` maps to `officer_kafaa`, stored **verbatim** (all auto-map by lowercase): `OFFICER_ID, FROM_DATE_C, TO_DATE (both MM-YYYY period labels), KAED (تقييم القائد المباشر), MOSDAK (تقييم القائد المصدق), FROM_DATE (ISO, ordering only), GRADE_COM (التقدير)`. Some rows omit `KAED`/`MOSDAK` (NULL). المتوسط is `AVG(kaed)` mapped through the `grades` band.
+
+Note: the dump emits `Insert into OFF.SECURITYS,` with a trailing comma after the table name; `parseInsert` tolerates a stray comma there.
+
+## البعثات والمأموريات (missions/courses)
+
+`BA3AST` maps to `officer_holder_paasat`, stored **verbatim** (auto-map by lowercase): `OFFICER_ID, ACTIV_NAME (النشاط: بعثة/مأمورية), ACTIV_NOTE (البيان), ACTIV_CODE (1=بعثة, 3=مأمورية), DATE_FROM, DATE_TO (ISO dates), COUNTRY_NAME (الدولة)`.
+
+**Import safety guard**: `parseAndImport` only wipes/reloads a target when at least one incoming column other than `officer_id` resolves. So a بعثات block mislabeled `SECURITYS` (which maps to `officer_kafaa`) can no longer delete an unrelated table — it is skipped with a warning instead.
+
+## الحالة الصحية (health status)
+
+`SE7A` maps to `officer_holder_health`, stored **verbatim** (auto-map by lowercase): `OFFICER_ID, SE7A` — one full-text statement per entry (date inline), same single-text shape as `gaza`.
+
+## Persistent data (committees, votes, users) is NEVER wiped by import.

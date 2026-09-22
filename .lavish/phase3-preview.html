@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>المرحلة ٣ — لوحة التحكم (توصيف التقييم)</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Tahoma", "Cairo", system-ui, sans-serif; background:#f1f5f9; color:#0f172a; }
+  :where(.grid, .flex) > * { min-width: 0; }
+  :where(p, h1, h2, h3, h4, li, td, th, .badge) { overflow-wrap: anywhere; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:0.75rem; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .badge { display:inline-flex; align-items:center; gap:.25rem; padding:.15rem .55rem; border-radius:9999px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; direction:ltr; unicode-bidi:isolate; font-size:.8rem; }
+  th, td { text-align:right; padding:.45rem .7rem; }
+  .rec { background:#fef9c3; color:#854d0e; }
+</style>
+</head>
+<body>
+
+<header class="bg-blue-900 text-white shadow-lg">
+  <div class="max-w-6xl mx-auto px-5 py-4">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold">المرحلة ٣ — لوحة التحكم (توصيف التقييم)</h1>
+        <p class="text-blue-200 text-sm mt-1">الشاشة الرئيسية بأربعة تبويبات + بنود التقييم + المرشحون + تسجيل الأعضاء</p>
+      </div>
+      <span class="badge bg-blue-700 text-white">معاينة قبل كتابة أي كود</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-5 py-6 space-y-8">
+
+  <!-- Control-panel mock -->
+  <section id="panel" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200">
+      <h2 class="font-bold text-slate-800">١) لوحة التحكم — نظير «تحكم - توصيف التقييم»</h2>
+      <p class="text-xs text-slate-500 mt-0.5">شريط علوي ثابت + أربعة تبويبات. نطوّر شاشة CommitteeDetail الحالية لتطابق هذا الشكل.</p>
+    </div>
+    <div class="p-4">
+      <!-- top bar -->
+      <div class="rounded-lg bg-blue-900 text-white px-4 py-2 flex flex-wrap items-center gap-4 text-xs mb-2">
+        <span>مسلسل: <b>١</b></span>
+        <span>العام التدريبي: <b>٢٠٢٦</b></span>
+        <span>بداية اللجنة: <b>٠١-٠١-٢٠٢٦</b></span>
+        <span class="ms-auto badge bg-red-600 text-white">حذف اللجنة الحالية</span>
+      </div>
+      <!-- tabs -->
+      <div class="flex gap-1 border-b border-gray-200 text-sm">
+        <span class="px-4 py-2 border-b-2 border-blue-600 text-blue-700 font-bold">الأعضاء</span>
+        <span class="px-4 py-2 border-b-2 border-transparent text-gray-500">بيانات الضباط</span>
+        <span class="px-4 py-2 border-b-2 border-transparent text-gray-500">تحديد بنود العرض</span>
+        <span class="px-4 py-2 border-b-2 border-transparent text-gray-500">ترتيب العرض</span>
+      </div>
+      <div class="grid md:grid-cols-2 gap-3 p-3 text-xs text-slate-600">
+        <div class="rounded border border-slate-200 p-2"><b>الأعضاء</b> — إسم المستخدم / الرتبة / الاسم / الوظيفة / داخل اللجنة (✓). زر «تحميل اللجنة».</div>
+        <div class="rounded border border-slate-200 p-2"><b>بيانات الضباط</b> — مسلسل / الأقدمية / اسم الضابط / لشغل وظيفة (مستوردة، قابلة للتعديل) / تاريخ المقابلة. مجموع الضباط + «اختيار».</div>
+        <div class="rounded border border-slate-200 p-2"><b>تحديد بنود العرض</b> — مسلسل / بند التقييم / الحد الأقصى (تحرير البنود).</div>
+        <div class="rounded border border-slate-200 p-2"><b>ترتيب العرض</b> — تسلسل الضباط للجلسة + منتظر/تم/إخفاء + توصية اللجنة (كما هو تقريباً).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- بنود -->
+  <section id="items" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200">
+      <h2 class="font-bold text-slate-800">٢) بنود التقييم (تحديد بنود العرض) — الافتراضية</h2>
+      <p class="text-xs text-slate-500 mt-0.5"><b>لكل لجنة بنودها الخاصة</b> (حسب ملاحظتك): تُنسخ من قالب افتراضي عند «تحميل البنود»، ويمكن لكل لجنة تعديل بنودها/حدودها. «مسير الخدمة» بند محسوب (قيمته = نسبة المرحلة ٢)؛ الباقي يُدخله العضو أثناء التصويت (المرحلة ٤).</p>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-xs"><tr><th>مسلسل</th><th>بند التقييم</th><th>الحد الأقصى</th><th>النوع</th></tr></thead>
+      <tbody class="divide-y divide-slate-100 text-xs">
+        <tr><td>١</td><td class="font-bold">مسير الخدمة</td><td>١٠٠</td><td><span class="badge rec">محسوب (من المرحلة ٢)</span></td></tr>
+        <tr><td>٢</td><td>لغة إنجليزية</td><td>١٠٠</td><td>يدوي</td></tr>
+        <tr><td>٣</td><td>المظهر العام</td><td>٢٠</td><td>يدوي</td></tr>
+        <tr><td>٤</td><td>الناسق</td><td>٢٠</td><td>يدوي</td></tr>
+        <tr><td>٥</td><td>الثقة بالنفس</td><td>٢٠</td><td>يدوي</td></tr>
+        <tr><td>٦</td><td>القدرة على التعبير</td><td>٢٠</td><td>يدوي</td></tr>
+        <tr><td>٧</td><td>معلومات عامة</td><td>٤٠</td><td>يدوي</td></tr>
+        <tr><td>٨</td><td>إدارة الحوار</td><td>٢٠</td><td>يدوي</td></tr>
+        <tr><td>٩</td><td>اللغة</td><td>٤٠</td><td>يدوي</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="px-5 py-2 text-xs text-slate-400">هذه قيم القالب الافتراضي (من بطاقة التصويت image2) — تُنسخ لكل لجنة وتُعدَّل داخلها بشكل مستقل.</p>
+  </section>
+
+  <!-- candidates + members -->
+  <section id="cand" class="grid md:grid-cols-2 gap-4">
+    <div class="card p-5">
+      <h2 class="font-bold text-slate-800 mb-2">٣) المرشحون (بيانات الضباط)</h2>
+      <ul class="text-sm text-slate-600 list-disc pr-5 space-y-1">
+        <li>تحميل كل الضباط المستوردين كمرشحين (قرار المرحلة ١) + إضافة/حذف يدوي.</li>
+        <li><span class="mono">لشغل وظيفة</span> <b>مستوردة</b> من عمود <span class="mono">ACTIV_NOTE</span> (مثل «ملحق دفاع سول») وتظهر كقيمة افتراضية لكل ضابط — قابلة للتعديل في الجدول.</li>
+        <li>حقل جديد <span class="mono">تاريخ المقابلة</span> لكل ضابط.</li>
+      </ul>
+    </div>
+    <div class="card p-5">
+      <h2 class="font-bold text-slate-800 mb-2">٤) تسجيل أعضاء اللجنة</h2>
+      <ul class="text-sm text-slate-600 list-disc pr-5 space-y-1">
+        <li>بحث عن ضابط بالأقدمية / الرقم العسكري / الاسم / الرتبة.</li>
+        <li>إضافته كعضو لجنة بترتيب، مع توليد بيانات دخول.</li>
+        <li>جدول الأعضاء المسجّلين بترتيبهم + حذف.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- data model -->
+  <section id="model" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-3">تغييرات قاعدة البيانات</h2>
+    <ul class="space-y-2 text-sm text-slate-700 list-disc pr-5">
+      <li><b>بنود لكل لجنة:</b> قالب افتراضي عام <span class="mono">eval_item_template</span> (البنود التسعة، مزروع وقابل للتعديل) + جدول <span class="mono">committee_eval_items</span> (committee_id, serial, name, max_degree, kind, source) يُنسخ من القالب عند «تحميل البنود» ويُعدَّل لكل لجنة على حدة.</li>
+      <li>عمود <span class="mono">officers.activ_note</span> يستورد «لشغل وظيفة» من <span class="mono">ACTIV_NOTE</span>؛ و<span class="mono">committee_officers.target_job</span> يلتقطها كقيمة افتراضية عند التحميل (قابلة للتعديل)، مع <span class="mono">interview_date</span> (تاريخ المقابلة) + هجرة.</li>
+      <li>تعديل «تحميل الضباط» ليحمّل كل الضباط المستوردين (بدون فلترة taraky_c) — تنفيذ قرار المرحلة ١.</li>
+    </ul>
+  </section>
+
+  <!-- Questions -->
+  <section id="questions" class="card p-5 space-y-6">
+    <h2 class="text-lg font-bold text-blue-900">أسئلة قبل التنفيذ</h2>
+
+    <form data-lavish-question="q-members" class="space-y-2"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('m'); if(v) window.lavish.queuePrompt('نموذج الأعضاء: '+v,{tag:'choice',data:{question:'members',answer:v}});">
+      <p class="font-bold text-sm">أ) كيف تُضاف أعضاء اللجنة؟</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="m" value="search" class="mt-1"> بحث وإضافة من الضباط (شاشة تسجيل الأعضاء) — مطابق للقطات <span class="badge rec">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="m" value="both" class="mt-1"> الاثنان: لوحة القادة الثابتة + إمكانية البحث والإضافة</label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="m" value="panel" class="mt-1"> إبقاء لوحة القادة الثابتة فقط (كما هو الآن)</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+
+    <div class="space-y-1 border-t border-slate-100 pt-4">
+      <p class="font-bold text-sm">ب) «لشغل وظيفة» (الوظيفة المستهدفة) <span class="badge rec">تم الحسم</span></p>
+      <p class="text-sm text-slate-600">مستوردة لكل ضابط من <span class="mono">ACTIV_NOTE</span> وتظهر كقيمة افتراضية، مع إمكانية تعديلها في جدول «بيانات الضباط».</p>
+    </div>
+
+    <form data-lavish-question="q-cand" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('c'); if(v) window.lavish.queuePrompt('تحميل المرشحين: '+v,{tag:'choice',data:{question:'candidates',answer:v}});">
+      <p class="font-bold text-sm">ج) تحميل المرشحين</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="c" value="all" class="mt-1"> تحميل كل المستوردين تلقائياً + إضافة/حذف يدوي <span class="badge rec">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="c" value="manual" class="mt-1"> اختيار يدوي فقط عبر «اختيار»</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+
+    <form data-lavish-question="q-split" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('s'); if(v) window.lavish.queuePrompt('تقسيم المرحلة ٣: '+v,{tag:'choice',data:{question:'split',answer:v}});">
+      <p class="font-bold text-sm">د) طريقة التنفيذ</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="s" value="split" class="mt-1"> تقسيم: ٣أ بنود التقييم · ٣ب لوحة التحكم + المرشحون · ٣ج تسجيل الأعضاء <span class="badge rec">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="s" value="together" class="mt-1"> دفعة واحدة</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+  </section>
+
+  <section id="approve" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-2">الموافقة على المرحلة ٣</h2>
+    <button type="button" data-lavish-action
+      onclick="window.lavish.queuePrompt('اعتمد المرحلة ٣ وابدأ التنفيذ حسب إجاباتي.',{tag:'approve',text:'اعتماد المرحلة ٣'});"
+      class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold text-sm">اعتماد المرحلة ٣ والبدء</button>
+  </section>
+
+  <p class="text-center text-xs text-slate-400 pt-2">راجع البنود والحقول الجديدة، اختر إجاباتك، ثم اعتمد. لن أكتب كوداً قبل موافقتك.</p>
+</main>
+</body>
+</html>

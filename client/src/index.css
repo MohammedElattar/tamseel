@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    direction: rtl;
+    text-align: right;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.7;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium;
+  }
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium;
+  }
+  .btn-success {
+    @apply bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium;
+  }
+  .input-field {
+    @apply w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+  /* Editable text areas: cap height and scroll vertically instead of growing the page. */
+  textarea.input-field {
+    @apply max-h-56 overflow-y-auto resize-y;
+  }
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+  }
+  .page-title {
+    @apply text-2xl font-bold text-gray-800 mb-6;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Member / live-voting experience only.
+   Scoped by `.member-ui` on MemberLayout so admin screens keep their density.
+   Audience is ~70 years old: 16px text floor, 44px+ targets, visible focus,
+   and no low-contrast grey for meaningful content — sized so a whole officer
+   case fits a 1080p screen at 100% zoom without shrinking the browser. The
+   two-class selectors deliberately out-specify Tailwind's own `.text-sm` /
+   `.text-gray-400` utilities inside this subtree, which lifts shared read-only
+   components (officer CV modal, reference modals) to the same floor without
+   editing them.
+   --------------------------------------------------------------------------- */
+.member-ui {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+.member-ui :focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+.member-ui .text-xs {
+  font-size: 0.875rem;
+  line-height: 1.35rem;
+}
+.member-ui .text-sm,
+.member-ui .text-base {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+.member-ui .text-gray-400,
+.member-ui .text-gray-500 {
+  color: #4b5563; /* gray-600: readable for real content, still visibly secondary */
+}
+.member-ui .btn-primary,
+.member-ui .btn-secondary,
+.member-ui .btn-danger,
+.member-ui .btn-success {
+  @apply inline-flex items-center justify-center min-h-[3rem] px-4 py-2;
+  /* Set directly, not with `@apply text-base`: that utility is redefined just above,
+     which Tailwind rejects as a circular dependency. */
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+.member-ui .btn-secondary {
+  @apply border border-gray-400 text-gray-900;
+}
+
+/* Reports use a clear, self-hosted Naskh face for legible printed Arabic. */
+.report-font {
+  font-family: "Noto Naskh Arabic", "Amiri", "Simplified Arabic", "Cairo", serif;
+}
+
+/* Center every table header and cell across all tables and reports. The RTL body
+   defaults to right alignment; !important also overrides per-cell text-right/left
+   utilities so columns are uniformly centered everywhere. */
+table th,
+table td {
+  text-align: center !important;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { direction: rtl; background: #fff !important; }
+  .report-screen-bg { background: #fff !important; padding: 0 !important; min-height: 0 !important; }
+  /* The sheet is 21cm (full A4) on screen; in print the @page margin already
+     provides the border, so let it fill the printable width instead of
+     overflowing it (which would emit a blank page beside every content page). */
+  .report-sheet { width: auto !important; margin: 0 !important; box-shadow: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { size: A4 portrait; margin: 1cm; }
+}
+
+/* ---------------------------------------------------------------------------
+   Compact density for short screens (target: 1366×768 at 100% browser zoom).
+   The whole UI — and especially the live-voting `.member-ui` — was sized for a
+   1080p height. On shorter screens we scale the entire rem-based layout down by
+   lowering the ROOT font size: text, padding, gaps and rem-sized boxes (e.g. the
+   17rem portrait) all shrink together, so a full officer case fits one viewport
+   without the operator having to zoom the browser out.
+
+   Why this works cleanly:
+   - Tailwind spacing/sizing is rem-based, so one knob scales it proportionally.
+   - Viewport units (the `100dvh` member shell) are NOT rem-based, so the shell
+     still fills the screen exactly while its content shrinks to fit inside it.
+   - Scoped to `screen`, so printed reports keep their exact cm-based sizing.
+
+   These are the tuning knobs: raise a value to make things bigger (less likely
+   to fit), lower it to make things smaller (more likely to fit). The 768-tall
+   fullscreen case lands on the `max-height: 780px` step; a windowed 768 screen
+   (minus taskbar + browser chrome) lands on `700px` or `640px`.
+   --------------------------------------------------------------------------- */
+@media screen and (max-height: 960px) { html { font-size: 15px; } }
+@media screen and (max-height: 880px) { html { font-size: 14px; } }
+@media screen and (max-height: 820px) { html { font-size: 13px; } }
+@media screen and (max-height: 780px) { html { font-size: 12.5px; } }
+@media screen and (max-height: 700px) { html { font-size: 12px; } }
+@media screen and (max-height: 640px) { html { font-size: 11px; } }

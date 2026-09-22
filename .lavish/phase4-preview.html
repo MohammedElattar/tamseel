@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>المرحلة ٤ — بطاقة تصويت العضو</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Tahoma", "Cairo", system-ui, sans-serif; background:#f1f5f9; color:#0f172a; }
+  :where(.grid, .flex) > * { min-width: 0; }
+  :where(p, h1, h2, h3, h4, li, td, th, .badge) { overflow-wrap: anywhere; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:0.75rem; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .badge { display:inline-flex; align-items:center; gap:.25rem; padding:.15rem .55rem; border-radius:9999px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; direction:ltr; unicode-bidi:isolate; font-size:.8rem; }
+  th, td { text-align:right; padding:.45rem .7rem; border-color:#e2e8f0; }
+  .rec { background:#fef9c3; color:#854d0e; }
+  .done { background:#dcfce7; color:#166534; }
+</style>
+</head>
+<body>
+
+<header class="bg-blue-900 text-white shadow-lg">
+  <div class="max-w-6xl mx-auto px-5 py-4">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold">المرحلة ٤ — بطاقة تصويت العضو</h1>
+        <p class="text-blue-200 text-sm mt-1">شاشة العضو: إدخال درجات البنود + متوسط التقييم + قرار (تصدق / لا يتصدق) — نظير image2</p>
+      </div>
+      <span class="badge bg-blue-700 text-white">معاينة قبل كتابة أي كود</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-5 py-6 space-y-6">
+
+  <!-- 1) THE VOTING CARD -->
+  <section class="card p-5">
+    <div class="mb-3">
+      <h2 class="text-lg font-bold text-blue-900">١) بطاقة التصويت — نظير «لشغل وظيفة»</h2>
+      <p class="text-sm text-slate-600">نطوّر <span class="mono">TagddedVotingScreen</span> الحالية إلى بطاقة درجات. <b>كل الأعضاء</b> يُدخلون الدرجات ويحفظونها؛ <b>القائد (ونائبه) فقط</b> لديه زرّا «تصدق / لا يتصدق» (القرار النهائي).</p>
+    </div>
+
+    <!-- card mock -->
+    <div class="rounded-xl border-2 border-slate-300 overflow-hidden">
+      <div class="bg-rose-50 border-b-2 border-rose-200 px-4 py-2 flex items-center justify-between">
+        <b class="text-rose-800 text-lg">لشغل وظيفة (ملحق دفاع سول)</b>
+        <span class="text-xs text-slate-500">القوات البحرية — فرع شئون الضباط</span>
+      </div>
+
+      <div class="px-4 py-3 bg-white flex flex-wrap items-center gap-x-6 gap-y-1 text-sm border-b border-slate-200">
+        <span><b class="text-blue-900">٢٥٠٦</b></span>
+        <span>مقدم بحري أ.ح / محمد مصطفى محمد المصيلحي</span>
+        <span class="text-slate-500">الترتيب: ٣ / ١٢</span>
+        <span class="text-slate-500">ترتيب الأسبقية: ١٩٤٦ م٣</span>
+      </div>
+
+      <div class="p-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
+        <!-- grid of items -->
+        <div>
+          <table class="w-full text-sm border border-slate-200 rounded overflow-hidden">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr><th>بند التقييم</th><th class="text-center w-24">الحد الأقصى</th><th class="text-center w-28">التقييم</th><th class="text-center w-16">%</th></tr>
+            </thead>
+            <tbody>
+              <tr class="border-t border-slate-200 bg-emerald-50">
+                <td>مسير الخدمة <span class="badge done">محسوب</span></td>
+                <td class="text-center">١٠٠</td>
+                <td class="text-center font-bold text-emerald-700">٧٤٫٢٩</td>
+                <td class="text-center">٧٤٪</td>
+              </tr>
+              <tr class="border-t border-slate-200"><td>لغة إنجليزية</td><td class="text-center">١٠٠</td><td class="text-center"><span class="inline-block w-16 border rounded px-2 py-0.5 bg-yellow-50">٨٠</span></td><td class="text-center">٨٠٪</td></tr>
+              <tr class="border-t border-slate-200"><td>المظهر العام</td><td class="text-center">٢٠</td><td class="text-center"><span class="inline-block w-16 border rounded px-2 py-0.5 bg-yellow-50">١٥</span></td><td class="text-center">٧٥٪</td></tr>
+              <tr class="border-t border-slate-200"><td>الناسق</td><td class="text-center">٢٠</td><td class="text-center"><span class="inline-block w-16 border rounded px-2 py-0.5 bg-yellow-50">١٦</span></td><td class="text-center">٨٠٪</td></tr>
+              <tr class="border-t border-slate-200"><td>الثقة بالنفس</td><td class="text-center">٢٠</td><td class="text-center"><span class="inline-block w-16 border rounded px-2 py-0.5 bg-yellow-50">١٧</span></td><td class="text-center">٨٥٪</td></tr>
+              <tr class="border-t border-slate-200"><td>القدرة على التعبير</td><td class="text-center">٢٠</td><td class="text-center"><span class="inline-block w-16 border rounded px-2 py-0.5 bg-yellow-50">١٥</span></td><td class="text-center">٧٥٪</td></tr>
+              <tr class="border-t border-slate-200"><td>معلومات عامة</td><td class="text-center">٤٠</td><td class="text-center"><span class="inline-block w-16 border rounded px-2 py-0.5 bg-yellow-50">٣٠</span></td><td class="text-center">٧٥٪</td></tr>
+              <tr class="border-t border-slate-200"><td>إدارة الحوار</td><td class="text-center">٢٠</td><td class="text-center"><span class="inline-block w-16 border rounded px-2 py-0.5 bg-yellow-50">١٦</span></td><td class="text-center">٨٠٪</td></tr>
+              <tr class="border-t border-slate-200"><td>اللغة</td><td class="text-center">٤٠</td><td class="text-center"><span class="inline-block w-16 border rounded px-2 py-0.5 bg-yellow-50">٣٠</span></td><td class="text-center">٧٥٪</td></tr>
+              <tr class="border-t-2 border-slate-300 bg-slate-50 font-bold">
+                <td>المجموع</td><td class="text-center">٣٨٠</td><td class="text-center">٢٩٣٫٢٩</td><td class="text-center text-blue-800">٧٧٪</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="text-xs text-slate-500 mt-1">الأصفر = يُدخله العضو (٠..الحد الأقصى). الأخضر = مسير الخدمة محسوب من المرحلة ٢ (للقراءة). العمود % والمجموع والمتوسط تُحسب تلقائياً.</p>
+        </div>
+
+        <!-- side: average + tahil + refs -->
+        <div class="space-y-3">
+          <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
+            <div class="text-xs text-slate-600">متوسط التقييم النهائي</div>
+            <div class="text-2xl font-bold text-blue-800">٧٧٪</div>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-2 text-xs">
+            <div class="font-bold text-slate-500 mb-0.5">أعلى تأهيل عسكري</div>
+            <div>دورة التأهيل لوظائف التمثيل العسكري</div>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-2 text-xs">
+            <div class="font-bold text-slate-500 mb-0.5">أعلى تأهيل مدني</div>
+            <div>ماجستير علوم عسكرية</div>
+          </div>
+          <button class="w-full px-3 py-1.5 rounded-lg bg-slate-800 text-white text-sm font-bold">حفظ التقييم</button>
+        </div>
+      </div>
+
+      <!-- reference buttons + decision -->
+      <div class="px-4 py-2 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-2 text-xs">
+        <span class="badge bg-slate-200 text-slate-700">ملخص بيانات الضابط</span>
+        <span class="badge bg-slate-200 text-slate-700">نتيجة تقييم مسير الخدمة</span>
+        <span class="badge bg-slate-200 text-slate-700">الوظائف السابقة</span>
+        <span class="badge bg-slate-200 text-slate-700">تقارير الكفاءة</span>
+      </div>
+      <div class="px-4 py-1.5 bg-amber-50 border-t border-amber-200 text-center text-xs font-bold text-amber-800">قرار القائد ونائبه فقط — لا يظهر لباقي الأعضاء (بطاقتهم = درجات + حفظ فقط)</div>
+      <div class="px-4 py-3 bg-white border-t border-slate-200 flex gap-3 justify-center">
+        <button class="px-8 py-2 rounded-lg bg-green-600 text-white font-bold">تصدق</button>
+        <button class="px-8 py-2 rounded-lg bg-red-600 text-white font-bold">لا يتصدق</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2) REFERENCE POPUPS -->
+  <section class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-2">٢) الشاشات المرجعية</h2>
+    <ul class="text-sm space-y-2 list-disc pr-5">
+      <li><b>ملخص بيانات الضابط</b> (image3–6): تبويبات — صورة الضابط وزوجته · الصورة العائلية · <b>الوظائف السابقة</b> (الرتبة/الوحدة/الوظيفة/من/إلى/المدة، الصفوف الخضراء = مميّزة) · <b>تقارير الكفاءة</b> (المتوسط + الفترات والدرجات). موجودة أصلاً كـ <span class="mono">OfficerCvScreen</span> ونعيد استخدامها.</li>
+      <li><b>نتيجة تقييم مسير الخدمة</b> (image2.1): جدول مكوّنات المرحلة ٢ (الوظائف/التأهيل/الكفاءة/التشكيلات/الأوسمة/البعثات/الجزاءات) + الحد الأقصى ١٠٥٠ = <span class="mono">٧٨٠/١٠٥٠ = ٧٤٫٢٩٪</span>. تُعرض كنافذة مرجعية للعضو.</li>
+      <li><b>أعلى تأهيل عسكري / مدني</b>: يظهران بجانب البطاقة (من بيانات الضابط المستوردة).</li>
+    </ul>
+  </section>
+
+  <!-- 3) DATA MODEL -->
+  <section class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-2">٣) تغييرات نموذج البيانات</h2>
+    <ul class="text-sm space-y-2 list-disc pr-5">
+      <li>جدول جديد <span class="mono">member_item_scores</span> (committee_id, user_id, officer_id, item_id, score) — درجة كل عضو لكل بند.</li>
+      <li>القرار (تصدق/لا يتصدق) — <b>للقائد ونائبه فقط</b> — يُخزَّن في <span class="mono">member_votes.user_opinion</span> (١ = تصدق، ٠ = لا يتصدق) ويصبح القرار النهائي للضابط.</li>
+      <li>مسير الخدمة (بند <span class="mono">kind=computed</span>) يأخذ درجته من <span class="mono">officer_service_score.pct</span> (المرحلة ٢) — للقراءة، نفس القيمة لكل الأعضاء.</li>
+      <li>متوسط تقييم العضو = <span class="mono">Σ درجاته ÷ Σ الحدود القصوى × ١٠٠</span>. النتيجة النهائية للضابط = متوسط متوسطات الأعضاء + أغلبية «تصدق».</li>
+      <li>API جديد: <span class="mono">POST /evaluations/scores</span> (حفظ الدرجات) و<span class="mono">GET /evaluations/current</span> يُرجّع البنود + درجات العضو + مسير الخدمة.</li>
+    </ul>
+  </section>
+
+  <!-- 4) FLOW -->
+  <section class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-2">٤) سير العمل</h2>
+    <ol class="text-sm space-y-1 list-decimal pr-5">
+      <li>المسؤول يعرض الضابط (المرحلة ٥) → تظهر بطاقته للأعضاء تلقائياً.</li>
+      <li>كل عضو يُدخل درجات البنود اليدوية (مسير الخدمة مملوء) ويضغط «حفظ التقييم».</li>
+      <li>القائد (ونائبه) يراجع متوسط اللجنة ويختار «تصدق» أو «لا يتصدق» — القرار النهائي.</li>
+      <li>القائد ينتقل للتالي بعد اكتمال درجات كل الأعضاء (نفس بوابة التالي الحالية).</li>
+    </ol>
+  </section>
+
+  <!-- 5) QUESTIONS -->
+  <section id="questions" class="card p-5 space-y-5">
+    <h2 class="text-lg font-bold text-blue-900">أسئلة قبل التنفيذ</h2>
+
+    <div class="space-y-1">
+      <p class="font-bold text-sm">أ) من يُدخل الدرجات ومن يقرر؟ <span class="badge rec">تم الحسم</span></p>
+      <p class="text-sm text-slate-600">كل الأعضاء (بما فيهم القائد) يُدخلون درجات البنود ويحفظونها؛ والقرار «تصدق / لا يتصدق» للقائد ونائبه فقط.</p>
+    </div>
+
+    <div class="space-y-1 border-t border-slate-100 pt-4">
+      <p class="font-bold text-sm">ب) خيارات قرار القائد <span class="badge rec">تم الحسم</span></p>
+      <p class="text-sm text-slate-600">تصدق / لا يتصدق فقط.</p>
+    </div>
+
+    <div class="space-y-1 border-t border-slate-100 pt-4">
+      <p class="font-bold text-sm">ج) «متوسط التقييم النهائي» <span class="badge rec">تم الحسم</span></p>
+      <p class="text-sm text-slate-600">نسبة كل عضو = Σ درجاته ÷ Σ الحدود القصوى × ١٠٠.</p>
+    </div>
+
+    <div class="space-y-1 border-t border-slate-100 pt-4">
+      <p class="font-bold text-sm">د) طريقة التنفيذ <span class="badge rec">تم الحسم</span></p>
+      <p class="text-sm text-slate-600">تقسيم: ٤أ نموذج البيانات + API · ٤ب بطاقة التصويت · ٤ج الشاشات المرجعية.</p>
+    </div>
+  </section>
+
+  <section id="approve" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-2">الموافقة على المرحلة ٤</h2>
+    <button type="button" data-lavish-action
+      onclick="window.lavish.queuePrompt('اعتمد المرحلة ٤ وابدأ التنفيذ حسب إجاباتي.',{tag:'approve',text:'اعتماد المرحلة ٤'});"
+      class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold text-sm">اعتماد المرحلة ٤ والبدء</button>
+  </section>
+
+  <p class="text-center text-xs text-slate-400 pt-2">راجع البطاقة والنموذج، أجب عن الأسئلة، ثم اعتمد. لن أكتب كوداً قبل موافقتك.</p>
+</main>
+</body>
+</html>

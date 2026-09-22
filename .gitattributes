@@ -1,0 +1,4 @@
+# Keep shell scripts LF (they break with CRLF) and Windows batch files CRLF,
+# regardless of the OS or editor used to commit them.
+*.sh text eol=lf
+*.bat text eol=crlf

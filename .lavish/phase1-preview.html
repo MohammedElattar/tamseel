@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>المرحلة ١ — بيانات المسار الوظيفي والاستيراد</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Tahoma", "Cairo", system-ui, sans-serif; background:#f1f5f9; color:#0f172a; }
+  :where(.grid, .flex) > * { min-width: 0; }
+  :where(p, h1, h2, h3, h4, li, td, th, .badge) { overflow-wrap: anywhere; }
+  svg { max-width: 100%; height: auto; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:0.75rem; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .badge { display:inline-flex; align-items:center; gap:.25rem; padding:.15rem .55rem; border-radius:9999px; font-size:.75rem; font-weight:700; white-space:nowrap; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; direction:ltr; unicode-bidi:isolate; font-size:.82rem; }
+  th, td { text-align:right; padding:.5rem .75rem; }
+  .new { background:#f0fdf4; }
+  .reuse { background:#eff6ff; }
+</style>
+</head>
+<body>
+
+<header class="bg-blue-900 text-white shadow-lg">
+  <div class="max-w-6xl mx-auto px-5 py-4">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold">المرحلة ١ — بيانات المسار الوظيفي والاستيراد</h1>
+        <p class="text-blue-200 text-sm mt-1">إدخال البيانات الخام لكل ضابط حتى نحسب منها «مسير الخدمة» في المرحلة ٢</p>
+      </div>
+      <span class="badge bg-blue-700 text-white">معاينة قبل كتابة أي كود</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-5 py-6 space-y-8">
+
+  <p class="text-xs text-slate-500 border-r-4 border-slate-300 pr-3">
+    مصدر التصميم: نظام تصميم المشروع نفسه (كحلي/RTL عربي) عبر Tailwind CDN. الجداول والأعمدة مستخرجة من ملفات
+    <span class="mono">/mnt/d/projects/queries/*</span> التي زودتني بها.
+  </p>
+
+  <!-- Goal + flow -->
+  <section id="goal" class="card p-5">
+    <h2 class="text-lg font-bold mb-1 text-blue-900">الهدف من هذه المرحلة</h2>
+    <p class="text-sm text-slate-600 mb-4">
+      نظام التمثيل العسكري <b>يحسب</b> درجة «مسير الخدمة» من بيانات الضابط الخام (الوظائف، تقارير الكفاءة، التشكيلات،
+      الأوسمة، البعثات، الجزاءات، التأهيل). هذه المرحلة تجهّز <b>جداول البيانات الخام</b> وتكييف <b>الاستيراد</b> ليقرأها
+      من ملف الـ SQL الربع سنوي. لا حساب بعد — الحساب في المرحلة ٢.
+    </p>
+    <svg viewBox="0 0 820 180" role="img" aria-labelledby="flow-title" class="w-full">
+      <title id="flow-title">تدفق: ملف الاستيراد ← الجداول الخام ← (محرك المرحلة ٢) ← النسبة</title>
+      <rect x="20" y="66" width="150" height="48" rx="8" fill="#e2e8f0" stroke="#94a3b8"/>
+      <text x="95" y="86" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">ملف SQL ربع سنوي</text>
+      <text x="95" y="103" text-anchor="middle" font-size="10" fill="#64748b">(INSERT statements)</text>
+      <line x1="170" y1="90" x2="210" y2="90" stroke="#64748b" stroke-width="2.5" marker-end="url(#a)"/>
+      <rect x="210" y="20" width="190" height="140" rx="10" fill="#f0fdf4" stroke="#16a34a"/>
+      <text x="305" y="40" text-anchor="middle" font-size="12" font-weight="800" fill="#166534">جداول البيانات الخام</text>
+      <text x="305" y="60" text-anchor="middle" font-size="10" fill="#166534">officers + الوظائف + الكفاءة</text>
+      <text x="305" y="76" text-anchor="middle" font-size="10" fill="#166534">التشكيلات (جديد) + الأوسمة (جديد)</text>
+      <text x="305" y="92" text-anchor="middle" font-size="10" fill="#166534">البعثات + الجزاءات + الصحة</text>
+      <text x="305" y="108" text-anchor="middle" font-size="10" fill="#166534">التأهيل (جديد)</text>
+      <line x1="400" y1="90" x2="445" y2="90" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="5 4" marker-end="url(#a)"/>
+      <rect x="445" y="60" width="175" height="60" rx="10" fill="#eff6ff" stroke="#3b82f6"/>
+      <text x="532" y="84" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1e3a8a">محرك الحساب</text>
+      <text x="532" y="101" text-anchor="middle" font-size="10" fill="#1e3a8a">(المرحلة ٢)</text>
+      <line x1="620" y1="90" x2="662" y2="90" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="5 4" marker-end="url(#a)"/>
+      <rect x="662" y="60" width="140" height="60" rx="10" fill="#fef9c3" stroke="#ca8a04"/>
+      <text x="732" y="86" text-anchor="middle" font-size="11.5" font-weight="800" fill="#854d0e">مسير الخدمة %</text>
+      <text x="732" y="103" text-anchor="middle" font-size="10" fill="#854d0e">بند التقييم المحسوب</text>
+      <defs><marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"/></marker></defs>
+    </svg>
+    <p class="text-xs text-slate-400 mt-1 text-center">الأسهم المتقطعة = مراحل لاحقة (٢). هذه المرحلة تنتهي عند تعبئة الجداول الخام.</p>
+  </section>
+
+  <!-- Stats -->
+  <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="card p-4 text-center"><p class="text-3xl font-extrabold text-green-600">٣</p><p class="text-xs text-slate-500 mt-1">جدول جديد</p></div>
+    <div class="card p-4 text-center"><p class="text-3xl font-extrabold text-blue-600">٦</p><p class="text-xs text-slate-500 mt-1">جدول قائم يُعاد استخدامه</p></div>
+    <div class="card p-4 text-center"><p class="text-3xl font-extrabold text-slate-700">١</p><p class="text-xs text-slate-500 mt-1">عمود جديد على officers</p></div>
+    <div class="card p-4 text-center"><p class="text-3xl font-extrabold text-slate-700">٩</p><p class="text-xs text-slate-500 mt-1">مصدر بيانات (query)</p></div>
+  </section>
+
+  <!-- New tables -->
+  <section id="new-tables" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-green-50 border-b border-green-100">
+      <h2 class="font-bold text-green-800">١) جداول جديدة تُضاف</h2>
+      <p class="text-xs text-green-700/80 mt-0.5">مصدرها ملفات لا يوجد لها جدول مطابق في المشروع الحالي.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-4 p-5">
+      <div class="new rounded-lg border border-green-200 p-3">
+        <h3 class="font-bold text-green-900 mono">officer_tashkeelat</h3>
+        <p class="text-xs text-slate-600 mb-2">خدمة التشكيلات (من <span class="mono">ALL_KHADMA_PERIODS</span>)</p>
+        <ul class="text-xs space-y-1 mono text-slate-700">
+          <li>officer_id</li>
+          <li>tashkeelat TEXT — مدة خدمة التشكيلات</li>
+          <li>khadma TEXT — مدة الخدمة الكلية</li>
+        </ul>
+      </div>
+      <div class="new rounded-lg border border-green-200 p-3">
+        <h3 class="font-bold text-green-900 mono">officer_medals</h3>
+        <p class="text-xs text-slate-600 mb-2">الأوسمة و الأنواط (من <span class="mono">wisam</span>)</p>
+        <ul class="text-xs space-y-1 mono text-slate-700">
+          <li>officer_id</li>
+          <li>wis_n TEXT — اسم الوسام/النوط</li>
+        </ul>
+      </div>
+      <div class="new rounded-lg border border-green-200 p-3">
+        <h3 class="font-bold text-green-900 mono">officer_qualification</h3>
+        <p class="text-xs text-slate-600 mb-2">التأهيل (من <span class="mono">OFFICER_TAHIL</span>)</p>
+        <ul class="text-xs space-y-1 mono text-slate-700">
+          <li>officer_id</li>
+          <li>txt TEXT — وصف التأهيل</li>
+          <li>grade REAL — الدرجة (حسب الرتبة)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reused tables -->
+  <section id="reuse-tables" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-blue-50 border-b border-blue-100">
+      <h2 class="font-bold text-blue-800">٢) جداول قائمة يُعاد استخدامها كما هي</h2>
+      <p class="text-xs text-blue-700/80 mt-0.5">الأعمدة موجودة بالفعل وتطابق مخرجات الـ queries — لا تغيير على البنية.</p>
+    </div>
+    <div class="p-5 flex flex-wrap gap-2 text-xs">
+      <span class="badge reuse text-blue-800 border border-blue-200 mono">officers ← elasasy</span>
+      <span class="badge reuse text-blue-800 border border-blue-200 mono">officer_holder_wazayef ← wazaf</span>
+      <span class="badge reuse text-blue-800 border border-blue-200 mono">officer_kafaa ← kafa/securitys</span>
+      <span class="badge reuse text-blue-800 border border-blue-200 mono">officer_holder_paasat ← ba3asat</span>
+      <span class="badge reuse text-blue-800 border border-blue-200 mono">officer_punishments_geza ← gaza</span>
+      <span class="badge reuse text-blue-800 border border-blue-200 mono">officer_holder_health ← se7a</span>
+    </div>
+  </section>
+
+  <!-- Import mapping -->
+  <section id="mapping" class="card overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200">
+      <h2 class="font-bold text-slate-800">٣) خريطة الاستيراد (Oracle → SQLite)</h2>
+      <p class="text-xs text-slate-500 mt-0.5">تُضاف إلى <span class="mono">TABLE_MAP</span>/<span class="mono">COLUMN_MAP</span> في importService.ts ودليل الاستيراد. أسماء جداول الـ INSERT مقترحة — راجعها في الأسئلة أدناه.</p>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-xs">
+        <tr><th>اسم جدول الـ INSERT (Oracle)</th><th>الجدول الهدف (SQLite)</th><th>ملاحظات / إعادة تسمية أعمدة</th></tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 text-xs">
+        <tr><td class="mono">ELASASY</td><td class="mono">officers</td><td>SPEB_N→speciality، TRANING_YEAR→training_year، ARM_C→arm_code، MILITARY_NUMBER→person_id</td></tr>
+        <tr><td class="mono">JOBS</td><td class="mono">officer_holder_wazayef</td><td>قائم — TO_DATE_→to_date، RAN_N (المرتب)→ran_n_mrtb، taraky_n→wasfia_tuahel_trky</td></tr>
+        <tr><td class="mono">SECURITYS</td><td class="mono">officer_kafaa</td><td>قائم — auto (from_date_c, to_date, mosdak, kaed, grade_com)</td></tr>
+        <tr class="new"><td class="mono">ALL_KHADMA_PERIODS</td><td class="mono">officer_tashkeelat</td><td>جديد — tashkeelat, khadma</td></tr>
+        <tr class="new"><td class="mono">WISAM</td><td class="mono">officer_medals</td><td>جديد — wis_n</td></tr>
+        <tr class="new"><td class="mono">OFFICER_TAHIL</td><td class="mono">officer_qualification</td><td>جديد — txt, grade</td></tr>
+        <tr><td class="mono">BA3AST</td><td class="mono">officer_holder_paasat</td><td>قائم — auto</td></tr>
+        <tr><td class="mono">GAZA</td><td class="mono">officer_punishments_geza</td><td>قائم — gaza (نص واحد)</td></tr>
+        <tr><td class="mono">SE7A</td><td class="mono">officer_holder_health</td><td>قائم — se7a (نص واحد)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- Deliverables -->
+  <section id="deliverables" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-3">مخرجات هذه المرحلة</h2>
+    <ul class="space-y-2 text-sm text-slate-700 list-disc pr-5">
+      <li>٣ جداول جديدة في <span class="mono">schema.sql</span> + هجرة <span class="mono">CREATE TABLE</span> في <span class="mono">connection.ts</span> للقواعد القائمة.</li>
+      <li>عمود <span class="mono">training_year</span> على <span class="mono">officers</span> (العام التدريبي) + هجرته.</li>
+      <li>إضافات <span class="mono">TABLE_MAP</span>/<span class="mono">COLUMN_MAP</span> في <span class="mono">importService.ts</span> وتحديث دليل الاستيراد <span class="mono">importGuide.ts</span> + شاشة <span class="mono">DataImport.tsx</span>.</li>
+      <li>ملف <span class="mono">inserts/sample.sql</span> صغير للاختبار المحلي (بيانات وهمية لبضعة ضباط).</li>
+      <li>تحقق: <span class="mono">tsc</span> للطرفين + استيراد تجريبي للعينة.</li>
+    </ul>
+  </section>
+
+  <!-- Questions -->
+  <section id="questions" class="card p-5 space-y-6">
+    <h2 class="text-lg font-bold text-blue-900">أسئلة قبل التنفيذ — اختر وأرسل</h2>
+
+    <form data-lavish-question="q-names" class="space-y-2"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('n'); if(v) window.lavish.queuePrompt('أسماء جداول الاستيراد: '+v,{tag:'choice',text:'INSERT names: '+v,element:event.currentTarget,data:{question:'insert-names',answer:v}});">
+      <p class="font-bold text-sm">أ) أسماء جداول الـ INSERT في ملف الاستيراد</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="n" value="proposed" class="mt-1"> استخدم الأسماء المقترحة أعلاه (ELASASY, JOBS, SECURITYS, ALL_KHADMA_PERIODS, WISAM, OFFICER_TAHIL, BA3AST, GAZA, SE7A) <span class="badge new text-green-800">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="n" value="custom" class="mt-1"> سأحدد أسماء مختلفة (سأكتبها في تعليق)</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+
+    <form data-lavish-question="q-cols" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('c'); if(v) window.lavish.queuePrompt('أعمدة officers الإضافية: '+v,{tag:'choice',text:'officers cols: '+v,element:event.currentTarget,data:{question:'officer-cols',answer:v}});">
+      <p class="font-bold text-sm">ب) أعمدة إضافية على <span class="mono">officers</span></p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="c" value="training_only" class="mt-1"> <span class="mono ms-1">training_year</span> فقط (الباقي مغطى) <span class="badge new text-green-800">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="c" value="plus" class="mt-1"> أضف كذلك <span class="mono">cadre_name</span> و <span class="mono">kind_name</span> و <span class="mono">activ_note</span></label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+
+    <form data-lavish-question="q-candidates" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('cf'); if(v) window.lavish.queuePrompt('تحميل المرشحين: '+v,{tag:'choice',text:'candidates: '+v,element:event.currentTarget,data:{question:'candidates',answer:v}});">
+      <p class="font-bold text-sm">ج) من هم المرشحون الذين يُحمّلون للجنة؟</p>
+      <p class="text-xs text-slate-500">استعلام <span class="mono">elasasy</span> مُفلتر مسبقاً (مرشح تمثيل عسكرى، العام التدريبي، ACTIV_CODE=5) بدون <span class="mono">taraky_c</span>.</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="cf" value="all" class="mt-1"> كل الضباط المستوردين هم المرشحون (لا فلترة <span class="mono">taraky_c</span>) <span class="badge new text-green-800">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="cf" value="keep" class="mt-1"> أبقِ فلترة الترقي القديمة</label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+
+    <form data-lavish-question="q-tahil" class="space-y-2 border-t border-slate-100 pt-4"
+      onsubmit="event.preventDefault(); const v=new FormData(event.currentTarget).get('t'); if(v) window.lavish.queuePrompt('جداول التأهيل القديمة: '+v,{tag:'choice',text:'old tahil: '+v,element:event.currentTarget,data:{question:'old-tahil',answer:v}});">
+      <p class="font-bold text-sm">د) جدولا التأهيل القديمان (<span class="mono">officer_tahil_3lmy/3askary</span>)</p>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="t" value="keep" class="mt-1"> أبقِهما لعرض CV، وأضف <span class="mono">officer_qualification</span> للحساب <span class="badge new text-green-800">موصى به</span></label>
+      <label class="flex items-start gap-2 text-sm"><input type="radio" name="t" value="drop" class="mt-1"> احذفهما واكتفِ بـ <span class="mono">officer_qualification</span></label>
+      <button type="submit" class="mt-1 px-4 py-1.5 rounded-lg bg-blue-900 text-white text-sm font-bold">إرسال</button>
+    </form>
+  </section>
+
+  <!-- Approve -->
+  <section id="approve" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-2">الموافقة على المرحلة ١</h2>
+    <p class="text-sm text-slate-600 mb-4">لو التصميم مناسب، اعتمده وسأبدأ التنفيذ (مع الإجابات أعلاه إن اخترتها).</p>
+    <button type="button" data-lavish-action
+      onclick="window.lavish.queuePrompt('اعتمد المرحلة ١ كما هي وابدأ التنفيذ.',{tag:'approve',text:'اعتماد المرحلة ١'});"
+      class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold text-sm">اعتماد المرحلة ١ والبدء</button>
+  </section>
+
+  <section id="risks" class="card p-5">
+    <h2 class="text-lg font-bold text-blue-900 mb-3">ملاحظات</h2>
+    <ul class="space-y-2 text-sm text-slate-700 list-disc pr-5">
+      <li>لا حساب لأي درجة في هذه المرحلة — فقط تجهيز وتعبئة الجداول الخام. الحساب في المرحلة ٢.</li>
+      <li>الجداول المستوردة تُمسح وتُعاد تعبئتها في كل استيراد (السلوك الحالي)، والجداول الجديدة تتبع نفس القاعدة.</li>
+      <li>أي تغيير على schema يحتاج هجرة في <span class="mono">connection.ts</span> (القواعد القائمة لا تتأثر بـ CREATE في schema.sql).</li>
+      <li>نوقف خادم التطوير قبل أي كتابة مباشرة على قاعدة البيانات.</li>
+    </ul>
+  </section>
+
+  <p class="text-center text-xs text-slate-400 pt-2">راجع الجداول والخريطة، علّق على أي صف، اختر إجاباتك ثم اعتمد. لن أكتب كوداً قبل موافقتك.</p>
+</main>
+</body>
+</html>

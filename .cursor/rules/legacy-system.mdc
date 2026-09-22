@@ -1,0 +1,41 @@
+---
+description: Legacy Oracle Forms system context and feature parity requirements
+alwaysApply: true
+---
+
+# Legacy System Context
+
+This project is a rebuild of two Oracle Forms applications: **edaray** (administrative/judicial committees) and **tagded** (promotion/renewal committees). Features must match the legacy system exactly.
+
+## Committee Workflow
+
+1. Admin creates committee (type, date, rank, scoring weights)
+2. Admin imports officer data (quarterly SQL file)
+3. Admin loads members (auto-detected by job code from imported officers)
+4. Admin assigns officers to be evaluated
+5. Admin activates committee (one active at a time)
+6. Admin activates officers one-by-one for live voting
+7. Members log in and vote on the active officer
+8. Admin monitors voting progress in real-time (5s polling)
+9. Admin calculates final decisions
+10. Admin reviews decisions, checks disputes
+11. Admin prints decision card report and member credentials
+
+## Edarya-Specific Features
+
+- Each officer has a `ta3n_type` (case type) that determines outcome labels
+- Case types: طعن (appeal), فصل (dismissal), استقالة (resignation), محو جزاء (penalty erasure), صلاحية (fitness), etc.
+- Officers may have charges, judgements, settlement text, resignation text
+- Additional fields: apology, eltemas_e3ada (retrial request), notes
+
+## Tagdded-Specific Features
+
+- Scoring uses nashra (bulletin) data from `takyeem_scores`
+- Career score components: kafaa, jobs, tashkeelat, tahil, passat, awsama, gazat
+- `l_lagna_type_c` determines if it's promotion vs renewal
+- History/member weight split (default 60/40) is configurable per committee
+- Good limit and pass limit thresholds
+
+## Reports Must Be Pixel-Perfect
+
+Reports (especially the decisions card - بطاقة قرارات اللجنة) must replicate the legacy Oracle Reports output exactly. These are printed and filed as official documents.

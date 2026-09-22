@@ -1,0 +1,44 @@
+---
+description: Frontend conventions for React/Tailwind TypeScript client
+globs: client/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend Conventions
+
+## API Layer
+
+All API calls go through `client/src/api/client.ts` (axios instance with JWT interceptor, base URL `/api`). Each API module returns `response.data` directly.
+
+## Field Name Handling
+
+Backend officer fields use legacy names. Frontend must handle both:
+- Name: `officer.per_name || officer.name` or `officer.officer_name`
+- Date of birth: `officer.date_birth` (not `date_of_birth`)
+- Date of rank: `officer.date_rank` (not `date_of_rank`)
+- Service: `officer.in_service === 'Y'` (string, not boolean)
+- Officer detail from `GET /officers/:id` returns `{officer: {...}}` — unwrap with `data.officer || data`
+- Officer search from `GET /officers` returns `{officers: [...]}` — access via `results.officers`
+
+## Decision Code Mapping
+
+Decision values are **integers**, not strings. Labels must handle both:
+```typescript
+const decisionLabels: Record<string | number, string> = {
+  1: 'قبول', accept: 'قبول',
+  0: 'رفض', reject: 'رفض',
+  '-1': 'تأجيل', postpone: 'تأجيل',
+  3: 'مجلس تأديب', disciplinary: 'مجلس تأديب',
+  4: 'عدم لياقة', unsuitability: 'عدم لياقة',
+};
+```
+
+## Voting Status
+
+`getVotingStatus()` returns an **array**. Each item has `voted_members[]` and `not_voted_members[]` — use these to determine per-user vote status.
+
+## UI Standards
+
+- All text is Arabic, direction is RTL (set in `index.css`)
+- Use Tailwind utility classes: `card`, `btn-primary`, `btn-secondary`, `input-field`, `label`, `page-title`
+- Reports must be pixel-perfect and printable (use `no-print` class for non-print elements)

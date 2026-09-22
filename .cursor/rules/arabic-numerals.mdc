@@ -1,0 +1,65 @@
+---
+description: Display all UI numbers in Arabic-Indic numerals
+globs: client/src/**/*.{tsx,ts}
+alwaysApply: true
+---
+
+# Arabic-Indic Numerals in the UI
+
+Every number shown to the user on ANY page/component MUST render in Arabic-Indic
+numerals (٠١٢٣٤٥٦٧٨٩), never Western digits (0123456789). Applies to serials,
+counts, dates, IDs, table cells, page numbers, badges, percentages, etc.
+
+Convert digits at render time with a shared helper:
+
+```typescript
+export const toArabicDigits = (val: string | number) =>
+  String(val ?? '').replace(/[0-9]/g, d => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
+```
+
+```tsx
+// BAD - Western digits shown to the user
+<td>{officer.serial}</td>
+<span>العدد: {items.length}</span>
+
+// GOOD - Arabic-Indic digits
+<td>{toArabicDigits(officer.serial)}</td>
+<span>العدد: {toArabicDigits(items.length)}</span>
+```
+
+## Dates (order matters, not just digits)
+
+Never pass a raw ISO date (`YYYY-MM-DD`) through `toArabicDigits`. Arabic-Indic
+digits are Unicode bidi class AN, so hyphen-separated segments flow right-to-left
+and the segments render REVERSED (year ends on the right, day on the left).
+
+Always format read-only dates with the shared `formatDate` helper, which outputs
+day-month-year so the day lands on the right in the RTL layout:
+
+```tsx
+// BAD - reversed segments (day appears on the left)
+<p>بداية اللجنة: {toArabicDigits(committee.lagna_date)}</p>
+
+// GOOD - day-month-year, day on the right
+<p>بداية اللجنة: {formatDate(committee.lagna_date)}</p>
+```
+
+Inputs and date pickers must show Arabic-Indic digits too:
+- Date fields: use the `client/src/components/ArabicDate.tsx` component (NOT a raw
+  `<input type="date">`). It shows the value in Arabic-Indic in the field and still
+  opens the native picker; `value`/`onChange` stay ISO (`YYYY-MM-DD`). The page also
+  sets `lang="ar-EG-u-nu-arab"` which helps the native popup where supported.
+- Editable numeric text inputs: display `value={toArabicDigits(state)}` and parse
+  typed input back with `toWesternDigits` in `onChange` before storing/sending.
+
+```tsx
+<input value={toArabicDigits(form.history_limit)}
+  onChange={e => setForm({ ...form,
+    history_limit: Number(toWesternDigits(e.target.value).replace(/[^0-9]/g, '')) })} />
+```
+
+Rules:
+- Underlying STATE, `key`s, `<select>`/`<option value>`, and API payloads stay
+  Western. Only the visible digits are Arabic-Indic (convert on the way in/out).
+- Use the shared helpers in `client/src/utils/format.ts` (`toArabicDigits`,
+  `toWesternDigits`); do not re-declare them per file.

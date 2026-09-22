@@ -1,0 +1,56 @@
+---
+description: Edara project overview - Egyptian Navy officer evaluation committee system
+alwaysApply: true
+---
+
+# Edara - Officer Evaluation Committee System
+
+Web rebuild of a legacy Oracle Forms system for the Egyptian Navy. Manages officer evaluation committees (لجان تقييم الضباط).
+
+## Stack
+
+- **Backend**: Node.js, Express, TypeScript, `sql.js` (WASM SQLite - no native compilation)
+- **Frontend**: React 18, Tailwind CSS, Vite, TypeScript
+- **Auth**: JWT with two roles: `admin` and `member`
+- **Monorepo**: `server/` and `client/` directories
+- **Language**: All UI is Arabic (RTL)
+- **Deployment**: Local-only, no cloud
+
+## Two Committee Types
+
+1. **tagdded** (تجديد وترقي) - Promotion/renewal: members give numeric grades (0-90) + accept/reject opinion. Final score = weighted career history + member grade.
+2. **edarya** (إدارية/قضائية) - Administrative/judicial: members give only an opinion (accept/reject/postpone/disciplinary/unsuitability). Different `ta3n_type` values produce different outcome labels.
+
+## Three Committee Levels (tamhidy)
+
+- `0` = Main (رئيسية)
+- `1` = Preliminary (تمهيدية)
+- `2` = Commander (القائد)
+
+## Data Model: Two Categories
+
+### Imported Tables (wiped quarterly via SQL INSERT file upload)
+`officers`, `ranks`, `cadres`, `kindoff`, `units`, `jobs`, `specializations`, `officer_kafaa`, `officer_punishments_geza`, `officer_holder_wazayef`, `officer_holder_kafaa`, `officer_holder_paasat`, `officer_holder_health`, `takyeem_scores`, `officers_in_nashra`, `grades`, `eval_lagna_cat`, `ta3n_types`, `l_lagna_type`
+
+### Persistent Tables (system-managed)
+`users`, `committees`, `committee_officers`, `committee_member_assignments`, `member_votes`, `committee_backups`, `import_logs`
+
+## Key Business Logic
+
+- **Member auto-loading**: The fixed commander panel (job codes 4185, 4187, 107181, 19, 67, 28, etc. in `committeePanel.ts`) becomes committee members with generated credentials. Note: the `ELASASY` candidate dump excludes the panel, so members come from a separate source.
+- **Officers import**: `officers` is imported as denormalized text (rank/unit/job/speciality) with pre-computed استيفاء (`taraky_estifa`/`estifa_job`) and promotion (`taraky_c`/`taraky_tagdeed`); the استيفاء engine is retired (imported, not computed).
+- **Scoring formula (tagdded)**: `final_degree = (career_total / 1040) * history_limit + (member_grade / 100) * member_limit`
+- **Career score**: comes from `takyeem_scores.total` (nashra data)
+- **Fitness / زيادة الوزن**: `fark_wazn` (weight + 100 - height) is imported; a value ≥ 15 flags the officer
+- **Disputes**: detected when a director's vote differs from the committee's final decision
+- **Decision codes**: `1=accept, 0=reject, -1=postpone, 3=disciplinary, 4=unsuitability`
+- **Edarya outcomes** vary by `ta3n_type` (e.g. type 4 = accept/reject resignation, type 6 = acquittal/conviction)
+
+## Key File Locations
+
+- DB schema: `server/src/db/schema.sql`
+- Import logic: `server/src/services/importService.ts` (Oracle-to-SQLite column mapping)
+- Scoring: `server/src/services/scoringService.ts`
+- Routes: `server/src/routes/{auth,officers,committees,evaluations,reports,import,lookup}.ts`
+- Frontend pages: `client/src/pages/admin/` and `client/src/pages/member/`
+- API wrappers: `client/src/api/{committees,officers,evaluations,reports,import,auth}.ts`

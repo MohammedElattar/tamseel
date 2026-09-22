@@ -1,0 +1,39 @@
+---
+description: Rules for reviewing legacy Oracle Forms XML and mapping fields to the web rebuild
+alwaysApply: true
+---
+
+# Legacy XML Review Rules
+
+When reviewing Oracle Forms XML files to determine UI fields, follow these rules strictly:
+
+## Only Visible Items Exist
+
+- A field is user-facing ONLY if it has a visible `Item` element with `CanvasName` set and is NOT `Visible="false"`.
+- `DataSourceColumn` entries are just schema definitions — they do NOT mean the field is shown in the UI.
+- Items with no `CanvasName`, no `XPosition`/`YPosition`, or `Visible="false"` are hidden database-only fields. Never list them as form fields.
+- Never mention hidden fields to the user unless explicitly asked about the schema.
+
+## Fields Are NOT Shared By Default
+
+- Tagdded and edarya were **separate Oracle Forms applications**. A field existing in both schemas does NOT mean it's visible in both UIs.
+- Always check each form's XML independently for visible `Item` elements.
+- Example: `TAMHIDY`, `HIDE_DECISION` have visible Items in tagdded but NO visible Items in edarya.
+- Example: `GOOD_LIMIT`, `PASS_LIMIT` are `Visible="false"` in tagdded and have no Item in edarya — hidden in both.
+
+## Use Exact Legacy Labels
+
+- Always use the exact `Prompt` or `Label` attribute from the XML for field labels.
+- If `Prompt` is empty or English-only, ask the user for the Arabic label.
+- Never invent or translate labels — use what the legacy form shows.
+
+## Dropdowns Are Populated Dynamically
+
+- `ListElementCount` with empty `ListItemElement` values means the dropdown is populated at runtime from a `RecordGroup` query.
+- Always find the corresponding `RecordGroup` and `POPULATE_LIST` call to know the data source.
+- Example: `LAGNA_CAT_C` is populated from `EVAL_LAGNA_CAT` (tagdded) vs `EVAL_JUDICIAL_LAGNA_CAT` (edarya) — same field name, different data sources.
+
+## Static List Values
+
+- When `ListItemElement` has actual `Name`/`Value` pairs, those are the hardcoded options.
+- Example: `TAMHIDY` has static options: `لجنة رئيسية`=0, `لجنة تمهيدية`=1, `لجنة القائد`=2.

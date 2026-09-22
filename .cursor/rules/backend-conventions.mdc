@@ -1,0 +1,43 @@
+---
+description: Backend conventions for Express/sql.js TypeScript server
+globs: server/src/**/*.ts
+alwaysApply: false
+---
+
+# Backend Conventions
+
+## sql.js Query Pattern
+
+`sql.js` returns `{columns: string[], values: any[][]}[]`. Always use the `mapRows` helper:
+
+```typescript
+function mapRows(results: any[]): Record<string, any>[] {
+  if (!results.length || !results[0].values.length) return [];
+  const columns = results[0].columns;
+  return results[0].values.map((row: any[]) => {
+    const obj: Record<string, any> = {};
+    columns.forEach((col: string, i: number) => { obj[col] = row[i]; });
+    return obj;
+  });
+}
+```
+
+## API Response Shapes (must match frontend expectations)
+
+- `GET /committees` → returns **array** directly (not `{committees:[]}`)
+- `GET /committees/:id` → returns **flat object** with `.members[]` and `.officers[]` at top level
+- `GET /officers` → returns `{officers:[], total, page, limit}`
+- `GET /officers/:id` → returns `{officer: {...}}`
+- `GET /evaluations/committee/:id/status` → returns **array** of officer status items
+- `GET /reports/committee/:id/decisions-card` → returns `{committee, members[], officers[]}`
+- `GET /reports/committee/:id/credentials` → returns **array** directly
+
+## Officer Field Names
+
+Officers table uses `per_name` (not `name`), `rank_code` (not `rank_id`), `unit_code`, `job_code`. Joins add `rank_name`, `unit_name`, `job_name`.
+
+## Auth Middleware
+
+All routes use `authenticate` middleware. Admin-only routes add `requireAdmin`. The user object is on `req.user` with `{id, username, role, display_name}`.
+
+## Always call `saveDB()` after any write operation (INSERT/UPDATE/DELETE).
