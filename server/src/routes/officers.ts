@@ -73,6 +73,24 @@ router.get('/:id/family-photo', (req: AuthRequest, res: Response) => {
   );
   sendImage(res, rows.length && rows[0].values.length ? rows[0].values[0][0] : null);
 });
+// Officer couple photo: matched via officers.id.
+router.get('/:id/couple-photo', (req: AuthRequest, res: Response) => {
+  if (!verifyToken(String(req.query.token || ''))) {
+    res.status(401).end();
+    return;
+  }
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).end();
+    return;
+  }
+  const db = getDB();
+  const rows = db.exec(
+    `SELECT p.couple FROM officers o JOIN officer_photos p ON p.officer_id = o.id WHERE o.id = ?`,
+    [id]
+  );
+  sendImage(res, rows.length && rows[0].values.length ? rows[0].values[0][0] : null);
+});
 
 router.use(authenticate);
 

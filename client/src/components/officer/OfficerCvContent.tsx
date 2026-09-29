@@ -2,6 +2,42 @@ import { useState, ReactNode } from 'react';
 import { toArabicDigits, formatDate } from '../../utils/format';
 import OfficerPhoto from '../member/OfficerPhoto';
 
+function PhotosSection({ officerId, large }: { officerId: number; large?: boolean }) {
+  const [active, setActive] = useState(0);
+  const tabs = [
+    { id: 'personal', label: 'صورة له' },
+    { id: 'couple', label: 'صورة الضابط وزوجته' },
+    { id: 'family', label: 'صورة له مع العائلة' },
+  ];
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div role="tablist" className="flex flex-wrap justify-center gap-2">
+        {tabs.map((t, i) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setActive(i)}
+            className={`min-h-[44px] rounded-lg border-2 px-4 py-2 text-base font-bold transition-colors ${
+              i === active ? 'border-blue-900 bg-blue-800 text-white' : 'border-gray-400 bg-white text-gray-900 hover:bg-gray-100'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 w-full max-w-md">
+        <OfficerPhoto
+          officerId={officerId}
+          kind={tabs[active].id as any}
+          fit="contain"
+          className="aspect-[4/5] w-full shadow-md rounded-xl"
+        />
+      </div>
+    </div>
+  );
+}
+
+
 interface Col { key: string; label: string; date?: boolean; num?: boolean; pct?: boolean; }
 
 const JOBS_COLS: Col[] = [
@@ -246,7 +282,7 @@ function BasicGrid({ h, b, large, committeeType, childrenRows }: { h: any; b: an
           officer id. Shown with object-contain so the whole photo is visible (family photos
           come in mixed portrait/landscape ratios); a wider column keeps it large. Falls back
           to a framed placeholder when none has been imported. */}
-      <div className="shrink-0 lg:w-80 2xl:w-[30rem]">
+      <div className="hidden">
         {h.id != null ? (
           <OfficerPhoto officerId={h.id} kind="family" label="الصورة العائلية" fit="contain" className="aspect-[4/5] w-full" />
         ) : (
@@ -376,6 +412,7 @@ export function buildCvSections(data: any, only: 'punishments' | undefined, big:
       ]
     : [
         { id: 'basic', label: 'البيانات الأساسية', content: <BasicGrid h={h} b={b} large={big} committeeType={data?.committee_type} childrenRows={data?.children} /> },
+        { id: 'photos', label: 'الصور', content: <PhotosSection officerId={h.id} large={big} /> },
         { id: 'jobs', label: 'الوظائف السابقة', content: <TableBody rows={data?.jobs} cols={JOBS_COLS} large={big} /> },
         { id: 'kafaa', label: 'تقارير الكفاءة', content: <KafaaSection avg={data?.kafaa_avg} rows={data?.kafaa} large={big} /> },
         { id: 'paasat', label: 'البعثات والمأموريات', content: <TableBody rows={data?.paasat} cols={PAASAT_COLS} large={big} /> },

@@ -339,6 +339,12 @@ router.get('/current', (req: AuthRequest, res: Response) => {
     'SELECT COUNT(*) as c FROM committee_officers WHERE committee_id = ? AND hidden = 0',
     [committee.id]
   ))[0]?.c as number) ?? 0;
+
+  const apologies = (mapRows(db.exec(
+    'SELECT COUNT(*) as c FROM committee_officers WHERE committee_id = ? AND hidden = 0 AND apology = 1',
+    [committee.id]
+  ))[0]?.c as number) ?? 0;
+
   // A guest casts no votes, so its counter tracks how far the session itself has got
   // (officers already closed) instead of a personal tally that would always read zero.
   // For a member, count only votes that still match a live officer case (officer +
@@ -450,7 +456,7 @@ router.get('/current', (req: AuthRequest, res: Response) => {
     [userId]
   ))[0] ?? null;
 
-  res.json({ committee, activeOfficer, myVote, evalItems, progress: { total, voted }, tally, memberVotes, memberStatuses, viewer });
+  res.json({ committee, activeOfficer, myVote, evalItems, progress: { total, voted, apologies }, tally, memberVotes, memberStatuses, viewer });
 });
 
 // GET /officer-cv/:officerId - officer CV summary (ملخص بيانات الضابط) sections.

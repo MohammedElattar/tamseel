@@ -21,6 +21,7 @@ const IMG_EXT = /\.(jpe?g|png|gif|webp|bmp)$/i;
 // A file is the family photo when its filename carries a family marker (Latin or Arabic).
 // The personal photo is simply the other image (any name), so only the family one needs a marker.
 const FAMILY_RE = /family|عائلي|عائلة|اسر[ةه]|أسر[ةه]/i;
+const COUPLE_RE = /couple|زوجة|زوج|زوجين/i;
 
 // Guard against non-image files that live alongside photos (Thumbs.db, .DS_Store, …).
 // Accepts only formats a browser can render inside <img>; that is what the voting/report
@@ -197,7 +198,7 @@ router.post('/photos', (req: AuthRequest, res: Response) => {
         if (officerId == null) { skipped++; cap(noIdSamples, rel || base); return; }
 
         // The family image is flagged by its own filename; the other image (any name) is personal.
-        const col = FAMILY_RE.test(base) ? 'family' : 'personal';
+        const col = COUPLE_RE.test(base) ? 'couple' : (FAMILY_RE.test(base) ? 'family' : 'personal');
         db.run(
           `INSERT INTO officer_photos (officer_id, ${col}, updated_at)
            VALUES (?, ?, datetime('now'))

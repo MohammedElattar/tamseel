@@ -166,7 +166,7 @@ export default function MemberDashboard() {
     );
   }
 
-  const remaining = progress ? progress.total - progress.voted : 0;
+  const remaining = progress ? progress.total - progress.voted - (progress.apologies || 0) : 0;
   const roleLabel = isCommander
     ? (user?.username === 'EVAL1' ? 'القائد' : 'نائب القائد')
     : 'عضو اللجنة';

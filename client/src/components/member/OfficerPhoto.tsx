@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 // frame has to crop, `object-top` keeps the face rather than the chest.
 export default function OfficerPhoto({ officerId, kind = 'personal', label, className = '', fit = 'cover' }: {
   officerId: number;
-  kind?: 'personal' | 'family';
+  kind?: 'personal' | 'family' | 'couple';
   label?: string;
   className?: string;
   // 'cover' fills the frame and crops (right for a portrait headshot); 'contain' shows the
@@ -18,9 +18,9 @@ export default function OfficerPhoto({ officerId, kind = 'personal', label, clas
   useEffect(() => setMissing(false), [officerId, kind]);
 
   const token = localStorage.getItem('edara_token') || '';
-  const endpoint = kind === 'family' ? 'family-photo' : 'photo';
-  const placeholder = label ?? (kind === 'family' ? 'لا توجد صورة عائلية' : 'لا توجد صورة');
-  const alt = kind === 'family' ? 'الصورة العائلية' : 'صورة الضابط';
+  const endpoint = kind === 'family' ? 'family-photo' : (kind === 'couple' ? 'couple-photo' : 'photo');
+  const placeholder = label ?? (kind === 'family' ? 'لا توجد صورة عائلية' : (kind === 'couple' ? 'لا توجد صورة للزوجين' : 'لا توجد صورة'));
+  const alt = kind === 'family' ? 'الصورة العائلية' : (kind === 'couple' ? 'صورة الضابط والزوجة' : 'صورة الضابط');
 
   return (
     <div

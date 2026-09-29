@@ -115,6 +115,7 @@ function runMigrations(database: Database): void {
     'ALTER TABLE officers ADD COLUMN is_deleted INTEGER DEFAULT 0',
     // Row order of the ELASASY dump; every officer listing sorts by it to keep the imported order.
     'ALTER TABLE officers ADD COLUMN import_order INTEGER',
+    'ALTER TABLE officer_photos ADD COLUMN couple BLOB',
     // العام التدريبي (TRANING_YEAR) for the التمثيل العسكري candidate filter/display.
     'ALTER TABLE officers ADD COLUMN training_year INTEGER',
     // لشغل وظيفة (ACTIV_NOTE): the imported target post per candidate.
