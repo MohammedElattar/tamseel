@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { toArabicDigits } from '../../utils/format';
+import OfficerPhoto from './OfficerPhoto';
 
 export interface EvalItem {
   id: number;
@@ -13,7 +14,6 @@ export interface EvalItem {
 interface Props {
   officer: any;
   evalItems: EvalItem[];
-  total: number;
   isCommander: boolean;
   myVote: any;
   saving: boolean;
@@ -41,11 +41,24 @@ const allowedValues = (max: number): number[] => {
   return Array.from(set).sort((a, b) => a - b);
 };
 
-// التمثيل العسكري voting card. Layout: score tile picker on the right, the (compact) بنود table in
-// the middle, and — for the commander/deputy — the تصدق/لا يتصدق decision + members' progress on the
-// left. مسير الخدمة / لغة إنجليزية are computed and read-only.
+// One officer-info fact: the label, then its value (a dash when empty).
+function InfoField({ label, value, warn }: { label: string; value: any; warn?: boolean }) {
+  return (
+    <>
+      <dt className="text-sm font-bold text-slate-600">{label}</dt>
+      <dd className={`min-w-0 text-lg font-bold break-words ${warn ? 'text-red-700' : 'text-slate-900'}`}>
+        {value == null || value === '' ? '-' : toArabicDigits(value)}
+      </dd>
+    </>
+  );
+}
+
+// التمثيل العسكري voting card. On top, the officer info (facts on the right, portrait on the left);
+// below it one row, right to left: the تصدق/لا يتصدق decision (commander/deputy), the score tile
+// picker, the (compact) بنود table, then the members' progress (commander/deputy).
+// مسير الخدمة / لغة إنجليزية are computed and read-only.
 export default function TamseelVotingScreen({
-  officer, evalItems, total, isCommander, myVote, saving, voting, pendingVote, error,
+  officer, evalItems, isCommander, myVote, saving, voting, pendingVote, error,
   onSaveScores, onVote, tally, memberVotes, commanderName,
 }: Props) {
   // Manual بند scores keyed by item_id, held as strings ('' = not picked); members pick from a tile grid.
@@ -130,21 +143,34 @@ export default function TamseelVotingScreen({
   const opinion = myVote?.user_opinion;
   const akdam = [officer?.akdam_no != null ? officer.akdam_no : '', officer?.akdam_rep || '']
     .filter(String).join(' ');
+  const kafaaAvg = officer?.kafaa_avg?.per == null
+    ? ''
+    : officer.kafaa_avg.grade
+      ? `${officer.kafaa_avg.grade} (${officer.kafaa_avg.per}٪)`
+      : `${officer.kafaa_avg.per}٪`;
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border-2 border-slate-300 bg-white shadow-lg lg:h-full lg:min-h-0 lg:flex-1">
-      {/* Header banner: the target post (لشغل وظيفة) then the officer identity. */}
-      <div className="shrink-0 bg-rose-50 border-b-2 border-rose-200 px-4 py-2 text-center">
-        <b className="text-rose-800 text-lg">
-          لشغل وظيفة{officer?.target_job ? ` (${officer.target_job})` : ''}
-        </b>
-      </div>
-      <div className="shrink-0 px-4 py-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm border-b border-slate-200">
-        {akdam && <span className="font-bold text-blue-900">{toArabicDigits(akdam)}</span>}
-        <span>{[officer?.rank_name, officer?.officer_name].filter(Boolean).join(' / ')}</span>
-        {officer?.serial != null && (
-          <span className="text-slate-500">الترتيب: {toArabicDigits(officer.serial)} / {toArabicDigits(total)}</span>
-        )}
+      {/* Officer info: the facts box on the right, the portrait on the left. */}
+      <div className="shrink-0 flex gap-3 border-b border-slate-200 p-2">
+        <div className="min-w-0 flex-1 grid content-center gap-x-10 gap-y-1 rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 sm:grid-cols-2">
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] content-start items-baseline gap-x-3 gap-y-1">
+            <InfoField label="الأقدمية" value={akdam} />
+            <InfoField label="الوظيفة" value={officer?.job_name} />
+            <InfoField label="الوحدة" value={officer?.unit_name} />
+          </dl>
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] content-start items-baseline gap-x-3 gap-y-1">
+            <InfoField label="الاسم" value={[officer?.rank_name, officer?.officer_name].filter(Boolean).join(' / ')} />
+            {/* Fitness flag: weight + 100 - height at or above 15 is a concern. */}
+            <InfoField label="التناسق" value={officer?.tanasok} warn={officer?.tanasok != null && officer.tanasok >= 15} />
+            <InfoField label="الحالة الاجتماعية" value={officer?.marital_status} />
+            <InfoField label="متوسط تقارير الكفاءة" value={kafaaAvg} />
+          </dl>
+        </div>
+        {/* A wide 4:3 frame; the photo covers it without stretching, cropped from the top so the face
+            stays in view. Larger on tall screens; short ones (e.g. 1366×768) keep it compact so the
+            row below never scrolls. */}
+        <OfficerPhoto officerId={officer.officer_id} className="aspect-[4/3] w-[12.5rem] shrink-0 [@media(min-height:900px)]:w-[17.75rem]" />
       </div>
 
       {error && (
@@ -153,24 +179,26 @@ export default function TamseelVotingScreen({
         </div>
       )}
 
-      {/* Scrollable body: score picker (right), بنود table (middle), commander decision + members'
-          progress (left). Stacks on small screens with the table first. */}
+      {/* Body, one row on desktop (RTL, right to left): the commander's تصدق/لا يتصدق decision, the
+          score picker, the بنود table, then the members' progress (commander only). The row is held
+          to the body's height and a column that can't fit (a long members list) scrolls inside its
+          own box, so the body itself never scrolls. Stacks on small screens with the table first. */}
       <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-        <div className={`p-3 grid gap-3 ${isCommander ? 'lg:grid-cols-[15rem_minmax(0,1fr)_17rem]' : 'lg:grid-cols-[15rem_minmax(0,1fr)]'}`}>
+        <div className="p-3 flex flex-col gap-3 lg:h-full lg:flex-row lg:items-start">
 
-          {/* بنود table (compact) + أعلى تأهيل — middle on desktop, first on mobile */}
-          <div className="min-w-0 space-y-2 order-1 lg:order-2">
+          {/* بنود table (compact) + أعلى تأهيل */}
+          <div className="min-w-0 space-y-2 lg:order-3 lg:flex-[2.4] lg:max-h-full lg:overflow-y-auto">
             {evalItems.length === 0 ? (
               <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-4 text-center text-sm text-amber-800">
                 لم تُحدَّد بنود التقييم لهذه اللجنة بعد.
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs border border-slate-200 rounded overflow-hidden">
+                <table className="w-full text-sm border border-slate-200 rounded overflow-hidden">
                   <thead className="bg-slate-100 text-slate-600">
                     <tr>
                       <th className="text-right px-2 py-1">بند التقييم</th>
-                      <th className="text-center px-2 py-1 w-14">الحد الأقصى</th>
+                      <th className="text-center px-2 py-1 whitespace-nowrap">الحد الأقصى</th>
                       <th className="text-center px-2 py-1 w-16">التقييم</th>
                       <th className="text-center px-2 py-1 w-12">%</th>
                     </tr>
@@ -181,11 +209,11 @@ export default function TamseelVotingScreen({
                       const val = scoreOf(it);
                       return (
                         <tr key={it.id} className={`border-t border-slate-200 ${computed ? 'bg-emerald-50' : ''}`}>
-                          <td className="px-2 py-1">
+                          <td className="px-2 py-0.5">
                         {it.name}
                           </td>
-                          <td className="text-center px-2 py-1">{toArabicDigits(it.max_degree)}</td>
-                          <td className="text-center px-2 py-1">
+                          <td className="text-center px-2 py-0.5">{toArabicDigits(it.max_degree)}</td>
+                          <td className="text-center px-2 py-0.5">
                             {computed ? (
                               <span className="font-bold text-emerald-700">
                                 {computedValue(it) != null ? fmt(computedValue(it) as number) : '—'}
@@ -203,17 +231,17 @@ export default function TamseelVotingScreen({
                               </button>
                             )}
                           </td>
-                          <td className="text-center px-2 py-1 text-slate-600">
+                          <td className="text-center px-2 py-0.5 text-slate-600">
                             {toArabicDigits(pctOf(val, Number(it.max_degree)))}٪
                           </td>
                         </tr>
                       );
                     })}
                     <tr className="border-t-2 border-slate-300 bg-slate-50 font-bold">
-                      <td className="px-2 py-1">المجموع</td>
-                      <td className="text-center px-2 py-1">{toArabicDigits(sumMax)}</td>
-                      <td className="text-center px-2 py-1">{fmt(sumScore)}</td>
-                      <td className="text-center px-2 py-1 text-blue-800">{toArabicDigits(average)}٪</td>
+                      <td className="px-2 py-0.5">المجموع</td>
+                      <td className="text-center px-2 py-0.5">{toArabicDigits(sumMax)}</td>
+                      <td className="text-center px-2 py-0.5">{fmt(sumScore)}</td>
+                      <td className="text-center px-2 py-0.5 text-blue-800">{toArabicDigits(average)}٪</td>
                     </tr>
                   </tbody>
                 </table>
@@ -223,13 +251,13 @@ export default function TamseelVotingScreen({
             {(officer?.highest_tahil_mil || officer?.highest_tahil_civil) && (
               <div className="grid gap-2 sm:grid-cols-2">
                 {officer?.highest_tahil_mil && (
-                  <div className="rounded-lg border border-slate-200 p-2 text-xs">
+                  <div className="rounded-lg border border-slate-200 p-2 text-sm">
                     <div className="font-bold text-slate-500 mb-0.5">أعلى تأهيل عسكري</div>
                     <div>{officer.highest_tahil_mil}</div>
                   </div>
                 )}
                 {officer?.highest_tahil_civil && (
-                  <div className="rounded-lg border border-slate-200 p-2 text-xs">
+                  <div className="rounded-lg border border-slate-200 p-2 text-sm">
                     <div className="font-bold text-slate-500 mb-0.5">أعلى تأهيل مدني</div>
                     <div>{officer.highest_tahil_civil}</div>
                   </div>
@@ -238,16 +266,16 @@ export default function TamseelVotingScreen({
             )}
           </div>
 
-          {/* Score picker (right): متوسط + tile grid + حفظ */}
-          <div className="space-y-3 order-2 lg:order-1">
+          {/* Score picker: متوسط + tile grid + حفظ */}
+          <div className="min-w-0 space-y-3 lg:order-2 lg:flex-[1.2] lg:max-h-full lg:overflow-y-auto">
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
-              <div className="text-xs text-slate-600">متوسط التقييم النهائي</div>
+              <div className="text-sm text-slate-600">متوسط التقييم النهائي</div>
               <div className="text-2xl font-bold text-blue-800">{toArabicDigits(average)}٪</div>
             </div>
 
             {!closed && selectedManual && (
               <div className="rounded-lg border border-slate-300 p-2">
-                <div className="text-xs font-bold text-slate-600 mb-1 text-center">
+                <div className="text-sm font-bold text-slate-600 mb-1 text-center">
                   {selectedManual.name}
                   <span className="text-slate-400"> (حد أقصى {toArabicDigits(selectedManual.max_degree)})</span>
                 </div>
@@ -260,7 +288,7 @@ export default function TamseelVotingScreen({
                         type="button"
                         disabled={saving}
                         onClick={() => pickValue(selectedManual, v)}
-                        className={`aspect-square flex items-center justify-center rounded text-lg font-bold border disabled:opacity-50 ${
+                        className={`h-11 flex items-center justify-center rounded text-lg font-bold border disabled:opacity-50 ${
                           active ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-800'
                         }`}
                       >
@@ -273,7 +301,7 @@ export default function TamseelVotingScreen({
                   type="button"
                   disabled={saving}
                   onClick={() => pickValue(selectedManual, null)}
-                  className="w-full mt-1 py-1 rounded text-xs border border-slate-300 text-slate-500 hover:bg-slate-100"
+                  className="w-full mt-1 py-1 rounded text-sm border border-slate-300 text-slate-500 hover:bg-slate-100"
                 >
                   مسح
                 </button>
@@ -291,10 +319,10 @@ export default function TamseelVotingScreen({
             )}
           </div>
 
-          {/* Commander/deputy (left): تصدق/لا يتصدق decision + members' progress */}
+          {/* Commander/deputy: تصدق/لا يتصدق decision */}
           {isCommander && (
-            <div className="rounded-lg border border-slate-200 overflow-hidden self-start order-3 lg:order-3">
-              <div className="px-3 py-1.5 bg-amber-50 text-center text-xs font-bold text-amber-800">
+            <div className="min-w-0 rounded-lg border border-slate-200 overflow-hidden lg:order-1 lg:flex-1">
+              <div className="px-3 py-1.5 bg-amber-50 text-center text-sm font-bold text-amber-800">
                 قرار {commanderName}
               </div>
               {closed ? (
@@ -302,12 +330,12 @@ export default function TamseelVotingScreen({
                   تم إغلاق التقييم على هذا الضابط
                 </p>
               ) : (
-                <div className="px-3 py-3 flex flex-col gap-2">
+                <div className="px-3 py-3 flex flex-col gap-3">
                   <button
                     type="button"
                     onClick={() => onVote(1)}
                     disabled={voting}
-                    className={`px-4 py-2 rounded-lg font-bold text-white disabled:opacity-50 ${opinion === 1 ? 'bg-green-700 ring-2 ring-green-300' : 'bg-green-600'}`}
+                    className={`px-4 py-3 rounded-lg text-lg font-bold text-white disabled:opacity-50 ${opinion === 1 ? 'bg-green-700 ring-2 ring-green-300' : 'bg-green-600'}`}
                   >
                     {pendingVote?.opinion === 1 ? '...' : 'تصدق'}{opinion === 1 ? ' ✓' : ''}
                   </button>
@@ -315,23 +343,32 @@ export default function TamseelVotingScreen({
                     type="button"
                     onClick={() => onVote(0)}
                     disabled={voting}
-                    className={`px-4 py-2 rounded-lg font-bold text-white disabled:opacity-50 ${opinion === 0 ? 'bg-red-700 ring-2 ring-red-300' : 'bg-red-600'}`}
+                    className={`px-4 py-3 rounded-lg text-lg font-bold text-white disabled:opacity-50 ${opinion === 0 ? 'bg-red-700 ring-2 ring-red-300' : 'bg-red-600'}`}
                   >
                     {pendingVote?.opinion === 0 ? '...' : 'لا يتصدق'}{opinion === 0 ? ' ✓' : ''}
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Commander/deputy: each member's scoring progress */}
+          {isCommander && (
+            <div className="min-w-0 flex flex-col rounded-lg border border-slate-200 overflow-hidden lg:order-4 lg:flex-1 lg:max-h-full">
+              <div className="shrink-0 px-3 py-1.5 bg-slate-100 text-center text-sm font-bold text-slate-700">
+                تقييمات أعضاء اللجنة
+              </div>
               {tally && (
-                <div className="px-3 pb-2 text-center text-xs text-slate-600">
+                <div className="shrink-0 px-3 pt-2 text-center text-sm text-slate-600">
                   أتمّ التقييم {toArabicDigits(tally.voted)} من {toArabicDigits(tally.total)} عضو
                 </div>
               )}
               {memberVotes && memberVotes.length > 0 && (
-                <div className="px-3 pb-3 grid gap-1">
+                <div className="p-2 grid content-start gap-1 lg:min-h-0 lg:overflow-y-auto">
                   {memberVotes.map((m: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between rounded border border-slate-200 px-2 py-1 text-xs">
-                      <span className="truncate">{m.name}</span>
-                      <span className={m.voted ? 'text-green-700 font-bold' : 'text-slate-400'}>
+                    <div key={i} className="flex items-center justify-between gap-2 rounded border border-slate-200 px-2 py-1 text-sm">
+                      <span className="min-w-0 leading-tight">{m.name}</span>
+                      <span className={`shrink-0 ${m.voted ? 'text-green-700 font-bold' : 'text-slate-400'}`}>
                         {m.voted ? 'أتمّ' : 'بانتظار'}
                       </span>
                     </div>

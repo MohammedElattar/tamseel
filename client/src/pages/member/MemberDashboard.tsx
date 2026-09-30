@@ -57,10 +57,11 @@ export default function MemberDashboard() {
   const myVote = data?.myVote;
   const progress = data?.progress;
   const tally = data?.tally;
+  const viewer = data?.viewer;
 
   // Surface the committee to the layout navbar, which names the running committee (a tagdded
   // committee is named by its نشرة month/year, so pass nashra_date).
-  const { setCommittee } = useMemberCommittee();
+  const { setCommittee, setViewer } = useMemberCommittee();
   useEffect(() => {
     setCommittee(
       committee
@@ -72,6 +73,15 @@ export default function MemberDashboard() {
         : null,
     );
   }, [committee?.committee_type, committee?.nashra_date, committee?.training_year, setCommittee]);
+
+  // The navbar also carries the seated member's own identity (job, rank, name).
+  useEffect(() => {
+    setViewer(
+      viewer
+        ? { display_name: viewer.display_name, job_title: viewer.job_title, rank_name: viewer.rank_name }
+        : null,
+    );
+  }, [viewer?.display_name, viewer?.job_title, viewer?.rank_name, setViewer]);
 
   // An error is cleared when the officer case changes or when the next action succeeds.
   const caseKey = officer ? `${officer.officer_id}:${officer.ta3n_type ?? ''}` : '';
@@ -167,25 +177,15 @@ export default function MemberDashboard() {
   }
 
   const remaining = progress ? progress.total - progress.voted - (progress.apologies || 0) : 0;
-  const roleLabel = isCommander
-    ? (user?.username === 'EVAL1' ? 'القائد' : 'نائب القائد')
-    : 'عضو اللجنة';
   // The commander's full title, used both as the vote panel heading and the decision
   // label above its buttons (mirrors the legacy قائد القوات البحرية voting canvas).
   const commanderName = user?.username === 'EVAL1'
     ? 'السيد قائد القوات البحرية'
     : 'السيد نائب قائد القوات البحرية';
-  // Header identity: the seat's position on the top line, then the person's "الرتبة / الاسم"
-  // under it — the second line only appears once a real name (distinct from the position) is set
-  // for the seat. A guest occupies no seat and holds no role, so the header shows no identity.
-  const viewer = data?.viewer;
-  const vJob = viewer?.job_title || '';
-  const vName = viewer?.display_name || user?.display_name || '';
-  const vRank = viewer?.rank_name || '';
-  const hasPersonName = !!vName && vName !== vJob;
-  const personLine = hasPersonName ? [vRank, vName].filter(Boolean).join(' / ') : '';
-  const viewerRole = isGuest ? undefined : (vJob || personLine || roleLabel);
-  const viewerPerson = isGuest ? undefined : (vJob && personLine ? personLine : undefined);
+  // The post the active officer is presented for (لشغل وظيفة) — for members, not the guest.
+  const jobLine = officer && !isGuest
+    ? `لشغل وظيفة${officer.target_job ? ` (${officer.target_job})` : ''}`
+    : undefined;
 
   // Reference screens open as their own page (not a modal), reached from the footer and reusing
   // the OfficerCvScreen layout (ملخص بيانات الضابط).
@@ -199,9 +199,7 @@ export default function MemberDashboard() {
     // pb-24 clears the fixed footer so the last card is never trapped behind it.
     <div className="mx-auto flex w-full max-w-[1700px] flex-1 flex-col gap-3 pb-24 lg:min-h-0">
       <MemberTopBar
-        voterRole={viewerRole}
-        voterName={viewerPerson}
-        kashida={user?.username === 'EVAL1'}
+        job={jobLine}
         current={officer?.serial}
         remaining={remaining}
         total={progress?.total ?? 0}
@@ -221,7 +219,7 @@ export default function MemberDashboard() {
             <GuestViewScreen committee={committee} officer={officer} />
           ) : (
             <TamseelVotingScreen
-              officer={officer} evalItems={data?.evalItems ?? []} total={progress?.total ?? 0}
+              officer={officer} evalItems={data?.evalItems ?? []}
               isCommander={isCommander} myVote={myVote} saving={saving} voting={voting}
               pendingVote={pendingVote} error={error}
               onSaveScores={handleSaveScores} onVote={handleVote}

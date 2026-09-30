@@ -70,6 +70,23 @@ function findPrevChainCommittee(db: any, tamhidy: number, nashraDate: string | n
   ))[0] ?? null;
 }
 
+// متوسط تقارير الكفاءة (legacy KAFAA_AVERAGE): round(avg of the commander ratings) mapped to a
+// grades band, e.g. "جيد جدا (٨٥)". per/grade are null when the officer has no rated reports.
+function kafaaAverage(db: any, officerId: number): { per: number | null; grade: string | null } {
+  const raw = mapRows(db.exec(
+    'SELECT ROUND(AVG(kaed)) AS per FROM officer_kafaa WHERE officer_id = ? AND kaed IS NOT NULL',
+    [officerId]
+  ))[0]?.per;
+  const per = raw != null ? Number(raw) : null;
+  const grade = per != null
+    ? (mapRows(db.exec(
+        'SELECT grade_name FROM grades WHERE ? >= from_range AND ? <= to_range LIMIT 1',
+        [per, per]
+      ))[0]?.grade_name as string) ?? null
+    : null;
+  return { per, grade };
+}
+
 // Officer warning indicators shown on the tagdded voting screen, ported faithfully
 // from the EVAL_USER_OPINION_DETAIL form functions VERY_GEZA and CURRENT_KAFAA_TAKREER.
 // Both are measured "during the current rank" (tariekh/from_date >= officers.date_rank).
@@ -152,6 +169,17 @@ router.get('/current', (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
   const isGuest = isGuestUser(db, req);
 
+  // The logged-in member's own identity for the header: rank beside the name. The rank is
+  // not in the JWT, so it is resolved here from the member's linked officer record.
+  const viewer = mapRows(db.exec(
+    `SELECT u.display_name, u.job_title, COALESCE(r.ran_n, u.rank_name) AS rank_name
+     FROM users u
+     LEFT JOIN officers o ON o.id = u.officer_id
+     LEFT JOIN ranks r ON r.ran_c = o.rank_code
+     WHERE u.id = ?`,
+    [userId]
+  ))[0] ?? null;
+
   const committeeCols =
     `c.id, c.committee_type, c.lagna_date, c.lagna_cat_c, c.tamhidy,
      c.nashra_date, c.prev_tamhidy_committee_id, c.is_active, c.status, c.training_year,
@@ -188,7 +216,7 @@ router.get('/current', (req: AuthRequest, res: Response) => {
       'SELECT 1 FROM committees WHERE is_active = 1 LIMIT 1'
     )).length > 0;
     const excluded = activeExists && req.user!.role === 'member' && !isGuest;
-    res.json({ committee: null, activeOfficer: null, myVote: null, progress: null, finished, excluded });
+    res.json({ committee: null, activeOfficer: null, myVote: null, progress: null, finished, excluded, viewer });
     return;
   }
 
@@ -310,18 +338,23 @@ router.get('/current', (req: AuthRequest, res: Response) => {
   }
 
   // التمثيل العسكري voting inputs: the committee بنود, this officer's admin-entered computed بنود
-  // (مسير الخدمة % + لغة إنجليزية), this member's saved scores, and أعلى تأهيل for the card side panel.
+  // (مسير الخدمة % + لغة إنجليزية), this member's saved scores, and أعلى تأهيل for the card side panel,
+  // plus the officer-info facts (التناسق، الحالة الاجتماعية، متوسط تقارير الكفاءة).
   const evalItems = mapRows(db.exec(
     'SELECT id, serial, name, max_degree, kind, source FROM committee_eval_items WHERE committee_id = ? ORDER BY serial',
     [committee.id]
   ));
   if (activeOfficer) {
     const tq = mapRows(db.exec(
-      'SELECT mil_qualification, civil_qualification FROM officers WHERE id = ?',
+      `SELECT mil_qualification, civil_qualification, marital_status, fark_wazn, weight, height
+       FROM officers WHERE id = ?`,
       [activeOfficer.officer_id]
     ))[0] ?? {};
     activeOfficer.highest_tahil_mil = tq.mil_qualification ?? null;
     activeOfficer.highest_tahil_civil = tq.civil_qualification ?? null;
+    activeOfficer.marital_status = tq.marital_status ?? null;
+    activeOfficer.tanasok = tq.fark_wazn ?? (tq.weight != null && tq.height != null ? tq.weight + 100 - tq.height : null);
+    activeOfficer.kafaa_avg = kafaaAverage(db, activeOfficer.officer_id);
     const ss = mapRows(db.exec(
       'SELECT pct, english FROM officer_service_score WHERE officer_id = ?',
       [activeOfficer.officer_id]
@@ -445,17 +478,6 @@ router.get('/current', (req: AuthRequest, res: Response) => {
     }));
   }
 
-  // The logged-in member's own identity for the header: rank beside the name. The rank is
-  // not in the JWT, so it is resolved here from the member's linked officer record.
-  const viewer = mapRows(db.exec(
-    `SELECT u.display_name, u.job_title, COALESCE(r.ran_n, u.rank_name) AS rank_name
-     FROM users u
-     LEFT JOIN officers o ON o.id = u.officer_id
-     LEFT JOIN ranks r ON r.ran_c = o.rank_code
-     WHERE u.id = ?`,
-    [userId]
-  ))[0] ?? null;
-
   res.json({ committee, activeOfficer, myVote, evalItems, progress: { total, voted, apologies }, tally, memberVotes, memberStatuses, viewer });
 });
 
@@ -507,22 +529,7 @@ router.get('/officer-cv/:officerId', (req: AuthRequest, res: Response) => {
      FROM officer_kafaa WHERE officer_id = ? ORDER BY from_date DESC`,
     [officerId]
   ));
-  // المتوسط (legacy KAFAA_AVERAGE): round(avg of the commander ratings) mapped to a grades
-  // band, e.g. "جيد جدا (٨٥)". per/grade are null when the officer has no rated reports.
-  const avgPerRaw = mapRows(db.exec(
-    'SELECT ROUND(AVG(kaed)) AS per FROM officer_kafaa WHERE officer_id = ? AND kaed IS NOT NULL',
-    [officerId]
-  ))[0]?.per;
-  const avgPer = avgPerRaw != null ? Number(avgPerRaw) : null;
-  const kafaa_avg = {
-    per: avgPer,
-    grade: avgPer != null
-      ? (mapRows(db.exec(
-          'SELECT grade_name FROM grades WHERE ? >= from_range AND ? <= to_range LIMIT 1',
-          [avgPer, avgPer]
-        ))[0]?.grade_name as string) ?? null
-      : null,
-  };
+  const kafaa_avg = kafaaAverage(db, officerId);
   const paasat = mapRows(db.exec(
     'SELECT activ_name, activ_note, country_name, date_from, date_to FROM officer_holder_paasat WHERE officer_id = ? ORDER BY date_from DESC',
     [officerId]

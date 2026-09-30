@@ -120,6 +120,9 @@ Key columns to remember:
 
 ### Member voting screen (what a member sees while voting)
 - Screen container / polling / vote submit: `client/src/pages/member/MemberDashboard.tsx`
+- Navbar with the seated member's identity (job + الرتبة / الاسم, kashida for EVAL1):
+  `client/src/components/layout/MemberLayout.tsx`; session bar (لشغل وظيفة + counters):
+  `client/src/components/member/MemberTopBar.tsx`
 - tagdded layout: `client/src/components/member/TagddedVotingScreen.tsx`
 - edarya layout: `client/src/components/member/EdaryaVotingScreen.tsx`
 - **The officer card (بيانات الضابط / ملخص الاستيفاء):** `client/src/components/member/OfficerDataCard.tsx`

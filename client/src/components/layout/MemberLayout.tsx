@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { MemberCommitteeContext, MemberCommitteeInfo } from '../../context/memberCommittee';
+import { MemberCommitteeContext, MemberCommitteeInfo, MemberViewer } from '../../context/memberCommittee';
 import { toArabicDigits } from '../../utils/format';
+import KashidaLine from '../KashidaLine';
 
 // The nav link names the running committee: لجنة التمثيل العسكري + its training year (from the
 // committee's training_year). Falls back to a generic label until the dashboard reports which
@@ -13,6 +14,17 @@ function committeeNavLabel(committee: MemberCommitteeInfo | null): string {
   return `لجنة التمثيل العسكري${year}`;
 }
 
+// The seated member's identity: the seat's position on the top line, then the person's
+// "الرتبة / الاسم" under it — the second line only appears once a real name (distinct from the
+// position) is set for the seat. Nothing is shown until the dashboard reports the viewer.
+function viewerLines(viewer: MemberViewer | null, fallbackName: string, roleLabel: string): [string, string] | null {
+  if (!viewer) return null;
+  const job = viewer.job_title || '';
+  const name = viewer.display_name || fallbackName;
+  const personLine = name && name !== job ? [viewer.rank_name, name].filter(Boolean).join(' / ') : '';
+  return [job || personLine || roleLabel, job ? personLine : ''];
+}
+
 // Shared nav-tab styling for the member header.
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `inline-flex min-h-[44px] items-center rounded-lg px-4 py-1 text-base font-bold transition-colors ${
@@ -20,10 +32,17 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export default function MemberLayout() {
-  const { logout, isGuest } = useAuth();
+  const { user, logout, isGuest, isCommander } = useAuth();
   const navigate = useNavigate();
   const [committee, setCommittee] = useState<MemberCommitteeInfo | null>(null);
+  const [viewer, setViewer] = useState<MemberViewer | null>(null);
   const navLabel = committeeNavLabel(committee);
+  const roleLabel = isCommander
+    ? (user?.username === 'EVAL1' ? 'القائد' : 'نائب القائد')
+    : 'عضو اللجنة';
+  const identity = viewerLines(viewer, user?.display_name || '', roleLabel);
+  // Kashida (Justify High) stretch is applied only for the قائد القوات البحرية seat.
+  const kashida = user?.username === 'EVAL1';
 
   const handleLogout = () => {
     logout();
@@ -35,13 +54,12 @@ export default function MemberLayout() {
   return (
     // On large screens the shell is exactly one viewport tall and never scrolls; any tall
     // column scrolls within itself instead. Below lg it falls back to normal page scroll.
-    <MemberCommitteeContext.Provider value={{ committee, setCommittee }}>
+    <MemberCommitteeContext.Provider value={{ committee, setCommittee, viewer, setViewer }}>
     <div className="member-ui flex min-h-[100dvh] flex-col bg-gray-50 lg:h-[100dvh] lg:overflow-hidden">
-      {/* The seated member's own name lives in the screen header below, next to the
-          session counters, so this bar stays a thin chrome strip. */}
       <header className="no-print bg-green-900 text-white shadow-lg">
-        {/* Three parts: nav on the start, the app name centered (equal flex-1 sides keep it
-            truly centred), and logout on the end. */}
+        {/* Three parts: nav on the start, the seated member's identity centered (equal flex-1
+            sides keep it truly centred), and logout on the end. A guest holds no seat, so it
+            keeps the app name there instead. */}
         <div className="mx-auto flex max-w-[1700px] items-center gap-4 px-4 py-2">
           <div className="flex flex-1 items-center">
             <nav className="flex items-center gap-2">
@@ -56,7 +74,19 @@ export default function MemberLayout() {
               )}
             </nav>
           </div>
-          <h1 className="shrink-0 text-center text-xl font-bold">قيادة القوات البحرية - فرع شئون ضباط</h1>
+          {isGuest ? (
+            <h1 className="shrink-0 text-center text-xl font-bold">قيادة القوات البحرية - فرع شئون ضباط</h1>
+          ) : identity && (
+            // Sizes to its content but never below a comfortable minimum: short lines still get room
+            // to stretch (kashida) to the minimum width, while a long name widens the box to fit it
+            // instead of spilling out. (The kashida fill undershoots, so this never feeds back.)
+            <div className="w-fit min-w-[28rem] max-w-full shrink-0 text-center">
+              <KashidaLine text={toArabicDigits(identity[0])} enabled={kashida} className="text-2xl font-bold leading-tight whitespace-nowrap" />
+              {identity[1] && (
+                <KashidaLine text={toArabicDigits(identity[1])} enabled={kashida} className="text-2xl font-bold leading-tight whitespace-nowrap" />
+              )}
+            </div>
+          )}
           <div className="flex flex-1 items-center justify-end">
             <button
               onClick={handleLogout}
