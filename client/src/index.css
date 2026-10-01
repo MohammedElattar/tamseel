@@ -90,6 +90,22 @@
   @apply border border-gray-400 text-gray-900;
 }
 
+/* Photo preview (ImageLightbox): the backdrop fades in and the photo eases in with a slight zoom. */
+@keyframes lightbox-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes lightbox-photo-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ترتيب اللجنة intro card (CategoryIntroOverlay): rises in with a soft fade. */
+@keyframes category-intro-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* Reports use a clear, self-hosted Naskh face for legible printed Arabic. */
 .report-font {
   font-family: "Noto Naskh Arabic", "Amiri", "Simplified Arabic", "Cairo", serif;

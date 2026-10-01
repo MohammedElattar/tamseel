@@ -11,10 +11,10 @@ interface Props {
   nav?: NavProps;
 }
 
-// Fixed footer: السابق at the right edge, التالي at the left edge, and the reference screens
+// Fixed footer: التالي at the right edge, السابق at the left edge, and the reference screens
 // centred between them. Pinned to the viewport so the commander reaches التالي without
 // scrolling past a long case file. The page reserves matching bottom padding so nothing ends
-// up hidden behind it.
+// up hidden behind it (MemberDashboard) — change the two together if this bar's height changes.
 export default function MemberActionBar({ buttons, nav }: Props) {
   // A fill of its own per action, so each button is recognised by colour before it is
   // read. All three avoid the green / red / amber / orange / rose family, which carries
@@ -28,14 +28,14 @@ export default function MemberActionBar({ buttons, nav }: Props) {
 
   return (
     <div className="no-print fixed inset-x-0 bottom-0 z-30 border-t-2 border-gray-300 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.1)]">
-      {/* Three parts (RTL): السابق on the start, the reference screens centred (equal flex-1
-          sides keep them truly centred), and التالي on the end. Members get no navigation, so
+      {/* Three parts (RTL): التالي on the start, the reference screens centred (equal flex-1
+          sides keep them truly centred), and السابق on the end. Members get no navigation, so
           their reference buttons simply sit in the middle. */}
       <div className="mx-auto flex max-w-[1700px] items-center gap-2 px-4 py-2">
         <div className="flex flex-1 items-center">
           {nav && (
-            <button type="button" onClick={nav.onPrev} disabled={nav.prevDisabled} className={prevBtn}>
-              السابق
+            <button type="button" onClick={nav.onNext} disabled={nav.nextDisabled} className={nextBtn}>
+              {nav.nextLabel}
             </button>
           )}
         </div>
@@ -50,8 +50,8 @@ export default function MemberActionBar({ buttons, nav }: Props) {
 
         <div className="flex flex-1 items-center justify-end">
           {nav && (
-            <button type="button" onClick={nav.onNext} disabled={nav.nextDisabled} className={nextBtn}>
-              {nav.nextLabel}
+            <button type="button" onClick={nav.onPrev} disabled={nav.prevDisabled} className={prevBtn}>
+              السابق
             </button>
           )}
         </div>

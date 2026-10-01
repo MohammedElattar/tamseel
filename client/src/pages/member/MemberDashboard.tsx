@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrent, castVote, advanceOfficer, saveScores } from '../../api/evaluations';
+import { getCurrent, castVote, advanceOfficer, saveScores, continueCategoryIntro } from '../../api/evaluations';
 import { useAuth } from '../../context/AuthContext';
 import { useMemberCommittee } from '../../context/memberCommittee';
 import TamseelVotingScreen from '../../components/member/TamseelVotingScreen';
@@ -8,6 +8,7 @@ import GuestViewScreen from '../../components/member/GuestViewScreen';
 import MemberTopBar from '../../components/member/MemberTopBar';
 import MemberActionBar from '../../components/member/MemberActionBar';
 import MemberStateScreen from '../../components/member/MemberStateScreen';
+import CategoryIntroOverlay from '../../components/member/CategoryIntroOverlay';
 import { useLiveUpdates } from '../../hooks/useLiveUpdates';
 
 export default function MemberDashboard() {
@@ -151,6 +152,16 @@ export default function MemberDashboard() {
     }
   };
 
+  const handleContinueIntro = async () => {
+    setError('');
+    try {
+      await continueCategoryIntro();
+      await fetchCurrent();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'تعذر المتابعة');
+    }
+  };
+
   if (loading) {
     return <MemberStateScreen title="جاري التحميل..." />;
   }
@@ -182,10 +193,16 @@ export default function MemberDashboard() {
   const commanderName = user?.username === 'EVAL1'
     ? 'السيد قائد القوات البحرية'
     : 'السيد نائب قائد القوات البحرية';
-  // The post the active officer is presented for (لشغل وظيفة) — for members, not the guest.
-  const jobLine = officer && !isGuest
-    ? `لشغل وظيفة${officer.target_job ? ` (${officer.target_job})` : ''}`
-    : undefined;
+  // The post the active officer is presented for (the لشغل وظيفة value, shown bare) — for
+  // members, not the guest.
+  const jobLine = officer && !isGuest && officer.target_job ? officer.target_job : undefined;
+  const sessionBar = {
+    job: jobLine,
+    category: officer?.category_name,
+    current: officer?.serial,
+    remaining,
+    total: progress?.total ?? 0,
+  };
 
   // Reference screens open as their own page (not a modal), reached from the footer and reusing
   // the OfficerCvScreen layout (ملخص بيانات الضابط).
@@ -196,14 +213,13 @@ export default function MemberDashboard() {
 
   return (
     // A flex column filling the viewport, so the officer card can stretch to the footer.
-    // pb-24 clears the fixed footer so the last card is never trapped behind it.
-    <div className="mx-auto flex w-full max-w-[1700px] flex-1 flex-col gap-3 pb-24 lg:min-h-0">
-      <MemberTopBar
-        job={jobLine}
-        current={officer?.serial}
-        remaining={remaining}
-        total={progress?.total ?? 0}
-      />
+    // The bottom padding clears the fixed action bar. On lg the bar (62px + 1rem) already sits
+    // over the layout's bottom padding and footer (3.1rem + 1px), so only the rest is reserved,
+    // leaving the same 0.75rem gap as between the cards. Below lg the page scrolls and the bar
+    // can wrap, so it keeps a generous pb-24.
+    <div className="mx-auto flex w-full max-w-[1700px] flex-1 flex-col gap-3 pb-24 lg:min-h-0 lg:pb-[calc(61px-1.35rem)]">
+      {/* On the voting canvas the session bar lives inside the officer box (see below). */}
+      {(!officer || isGuest) && <MemberTopBar {...sessionBar} />}
 
       {!officer ? (
         <MemberStateScreen
@@ -224,6 +240,7 @@ export default function MemberDashboard() {
               pendingVote={pendingVote} error={error}
               onSaveScores={handleSaveScores} onVote={handleVote}
               tally={tally} memberVotes={data?.memberVotes ?? []} commanderName={commanderName}
+              header={<MemberTopBar {...sessionBar} embedded />}
             />
           )}
 
@@ -239,6 +256,13 @@ export default function MemberDashboard() {
           />
         </>
       )}
+
+      {/* A new ترتيب اللجنة category covers the page until the commander presses متابعة. */}
+      <CategoryIntroOverlay
+        intro={officer ? data?.categoryIntro ?? null : null}
+        onContinue={isCommander ? handleContinueIntro : undefined}
+        error={error}
+      />
     </div>
   );
 }

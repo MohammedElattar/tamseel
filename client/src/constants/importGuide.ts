@@ -1,7 +1,8 @@
-// Reference for the data-import screen: exactly the officer dumps the importer accepts, what
-// each one holds, its column list, the Oracle SELECT to run on the live machine to produce
-// the dump, and a copy-paste example of the resulting INSERT. Everything else (rank/unit/job
-// lookups, committee categories, etc.) is seeded by the system and is NOT imported.
+// Reference for the data-import screen: the officer dumps the app uses, what each one holds,
+// its column list, the Oracle SELECT to run on the live machine to produce the dump, and a
+// copy-paste example of the resulting INSERT. Everything else (rank/unit/job lookups, committee
+// categories, etc.) is seeded by the system and is NOT imported. The importer still accepts a
+// few retired dumps (TAHIL_3LMY, TAHIL_3ASKARY, OFFICER_CHILDREN, MEMBERS) not listed here.
 //
 // Each SELECT's column aliases are written to EXACTLY match the INSERT column names (same
 // names, same order), so exporting the result as INSERT statements yields the expected shape
@@ -283,134 +284,6 @@ order by date_from desc;`,
    (ID, TXT, GRADE)
  Values
    (3578, 'دورة أركان حرب', 170);`,
-      },
-      {
-        oracle: 'TAHIL_3LMY',
-        target: 'officer_tahil_3lmy',
-        label: 'الدراسات العلمية',
-        desc: 'صف لكل دراسة: الدرجة (TYPE: ماجيستير/دكتوراة/دبلوم) والموقف (MAWKAF: حاصل/مستمر/مرشح/إلغاء) وموضوع الدراسة (SUBJECT). القيم نصية جاهزة.',
-        columns: 'ID, SUBJECT, TYPE, MAWKAF',
-        selectQuery: `select do.id, subject, decode(type, '3', 'دبلوم', '2', 'ماجيستير', '1', 'دكتوراة', '4', 'تأهيل مدني','5','بكالوريوس') type,
-  decode(do.MAWKAF, '1', 'حاصل' , '2', 'مستمر', '3', 'إلغاء', '4', 'جاري إلغاء', '5', 'جاري إلغاء','6','مرشح') MAWKAF
-from off.derasat_olia do , officers_in_nashra oin
-where do.id = oin.id
-and type in (1,2,3,4,5)
-and do.MAWKAF in (1,2,3,4,5,6)
-AND oin.nashra_rank IN (3, 4, 5)
-AND TO_CHAR (OFF.gettaraky_c (oin.nashra_rank, oin.nashra_type, oin.nashra_tagdeed)) >= 3
-AND oin.taraky_tagdeed <> 'تجديد لواء'
-AND oin.NASHRA_DATE = '1-1-2027'
-union
-select t.id, tahc_n, 'ماجستير', 'حاصل'
-from off.v_tahil t , officers_in_nashra oin
-where t.TAHC_C=666
-and oin.id = t.id
-AND oin.nashra_rank IN (3, 4, 5)
-AND TO_CHAR (OFF.gettaraky_c (oin.nashra_rank, oin.nashra_type, oin.nashra_tagdeed)) >= 3
-AND oin.taraky_tagdeed <> 'تجديد لواء'
-AND oin.NASHRA_DATE = '1-1-2027';`,
-        example: `Insert into OFF.TAHIL_3LMY
-   (ID, SUBJECT, TYPE, MAWKAF)
- Values
-   (1266, 'ماجستير في اللوجستيات والنقل البحري', 'ماجيستير', 'مستمر');`,
-      },
-      {
-        oracle: 'TAHIL_3ASKARY',
-        target: 'officer_tahil_3askary',
-        label: 'التأهيل العسكري',
-        desc: 'صف لكل دورة عسكرية: اسم الدورة (JOB_N) مثل دورة حرب عليا أو دورة دفاع وطني.',
-        columns: 'ID, JOB_N',
-        selectQuery: `select oin.ID , oin.JOB_N
-from officers_in_nashra oin
-where oin.JOB_C in (100270,103582,100269,101197,102961,101175)
-AND oin.nashra_rank IN (3, 4, 5)
-AND TO_CHAR (OFF.gettaraky_c (oin.nashra_rank, oin.nashra_type, oin.nashra_tagdeed)) >= 3
-AND oin.taraky_tagdeed <> 'تجديد لواء'
-AND oin.NASHRA_DATE = '1-1-2027';`,
-        example: `Insert into OFF.TAHIL_3ASKARY
-   (ID, JOB_N)
- Values
-   (2693, 'دورة حرب عليا');`,
-      },
-      {
-        oracle: 'OFFICER_CHILDREN',
-        target: 'officer_children',
-        label: 'الأبناء',
-        desc:
-          'صف لكل ابن/ابنة: الاسم والنوع (ذكر/أنثى) وتاريخ الميلاد. بيانات يدوية تُدار داخل النظام ' +
-          'ويمكن أيضاً استيرادها. عند الاستيراد يُستبدل أبناء كل ضابط مذكور في الملف فقط (لا يُمسح ' +
-          'باقي الضباط)، وتبقى محفوظة بعد إعادة استيراد بيانات الضباط.',
-        columns: 'ID, NAME, GENDER, DATE_BIRTH',
-        selectQuery: `select e.id , substr( f.NAME , 1, instr(f.name||' ',' ') - 1) as name , decode(f.FAMILYTYPE_C, 1,'ذكر',5,'انثي' , '')  as Gender , f.BIRTHDATE as DATE_BIRTH
- from elasasy e , off.family f, off.officers_in_nashra oin
- where e.ID = f.ID
- and oin.ID = e.id
- and f.FAMILYTYPE_C in (1,5)
- AND oin.nashra_rank IN (3, 4, 5)
- AND TO_CHAR (OFF.gettaraky_c (oin.nashra_rank, oin.nashra_type, oin.nashra_tagdeed)) >= 3
- AND oin.taraky_tagdeed <> 'تجديد لواء'
- AND oin.NASHRA_DATE = '1-1-2027';`,
-        example: `Insert into OFFICER_CHILDREN
-   (ID, NAME, GENDER, DATE_BIRTH)
- Values
-   (4453, 'نورا', 'انثي', TO_DATE('03/01/2006 00:00:00', 'MM/DD/YYYY HH24:MI:SS'));`,
-      },
-    ],
-  },
-  {
-    title: 'أعضاء اللجنة',
-    note:
-      'قائمة القادة الذين يُحمّلون كأعضاء تصويت عبر «تحميل الأعضاء» داخل اللجنة. تُطابَق الصفوف ' +
-      'بالمقاعد الثابتة عبر المسمى الوظيفي (JOB_N)، فيبقى القائد ونائبه في مقعديهما. الحقل ID (معرّف ' +
-      'Oracle) للعلم فقط وقد يتكرر بين صفّين. تُحدَّث الأسماء والرتب فور الاستيراد، ثم تُطبَّق على اللجنة ' +
-      'عند الضغط على «تحميل الأعضاء».',
-    tables: [
-      {
-        oracle: 'MEMBERS',
-        target: 'members',
-        label: 'أعضاء اللجنة',
-        desc: 'صف لكل عضو: الرتبة (FULL_RANK) والاسم (PER_NAME) والمسمى الوظيفي (JOB_N) الذي يُطابَق به المقعد. المثال يغطي مقاعد اللجنة الثابتة العشرة.',
-        columns: 'ID, FULL_RANK, PER_NAME, JOB_N',
-        example: `Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (2763, 'فريق', 'محمود عادل محمود فوزى', 'قائد القوات البحرية');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (3105, 'لواء بحري أ.ح', 'محمد حسن عبد الرحمن الشربينى', 'رئيس أركان القوات البحرية');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (3421, 'لواء أ.ح', 'أحمد فؤاد حسن محمد', 'مدير ادارة شئون الضباط');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (2890, 'لواء بحري', 'سامح جمال بحيرى سعيد', 'مساعد القائد للشئون الفنية');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (3540, 'لواء بحري أ.ح', 'محمد نبيل إبراهيم أحمد', 'رئيس شعبة العمليات');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (3612, 'لواء بحري أ.ح', 'محسن محمد أحمد حتاته', 'رئيس شعبة التنظيم و الإدارة البحرية');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (3701, 'لواء بحري أ.ح', 'رامى أحمد إسماعيل محمد', 'قائد الاسطول الشمالي');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (3255, 'لواء بحري أ.ح', 'عمر محمد فتحى مصطفى الصباغ', 'رئيس شعبة التدريب');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (3760, 'لواء بحري أ.ح', 'هانى السيد عبد العزيز خليل', 'قائد الاسطول الجنوبي');
-Insert into MEMBERS
-   (ID, FULL_RANK, PER_NAME, JOB_N)
- Values
-   (3980, 'عميد بحري', 'محمد رشدي السيد دعبس', 'رئيس فرع شئون الضباط');`,
       },
     ],
   },

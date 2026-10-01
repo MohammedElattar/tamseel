@@ -15,6 +15,7 @@ import reportRoutes from './routes/reports.js';
 import lookupRoutes from './routes/lookup.js';
 import scoringRoutes from './routes/scoring.js';
 import memberRoutes from './routes/members.js';
+import categoryRoutes from './routes/categories.js';
 import { seedAdmin, seedGuest, seedLookups, seedCommitteePanelMembers, removeSeededTestData } from './db/seed.js';
 import { backfillCompletedTagddedDecisions } from './services/scoringService.js';
 import { arabizeStoredText } from './config/arabicText.js';
@@ -62,6 +63,7 @@ async function start() {
   app.use('/api/lookup', lookupRoutes);
   app.use('/api/scoring', scoringRoutes);
   app.use('/api/members', memberRoutes);
+  app.use('/api/categories', categoryRoutes);
 
   // Production single-process deploy: serve the built client from this same server so the whole
   // app runs on one port with no separate web server (the offline single-folder bundle). Skipped

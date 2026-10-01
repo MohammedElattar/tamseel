@@ -6,12 +6,9 @@ import { toArabicDigits, formatDate } from '../../../utils/format';
 
 const fmt = (v: any) =>
   v == null ? '—' : toArabicDigits(Number.isInteger(Number(v)) ? String(v) : Number(v).toFixed(1));
-const tawsya = (v: any) =>
-  Number(v) === 0 ? 'يوصى بالإحالة' : Number(v) === 1 ? 'لا يوصى بالإحالة' : '—';
-
 // بطاقة تقييم أعضاء اللجنة (printable): one card per officer — the members×بنود score matrix with the
 // computed بنود (مسير الخدمة % + لغة إنجليزية), each member's total/نسبة, the averages, and the final
-// evaluation + توصية. Mirrors the موقف/مراجعة screen, formatted as an official filable document.
+// evaluation. Mirrors the موقف/مراجعة screen, formatted as an official filable document.
 export default function MemberScoresCardReport() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<any>(null);
@@ -103,8 +100,7 @@ export default function MemberScoresCardReport() {
               </tbody>
             </table>
 
-            <div className="flex justify-between items-center mt-1 font-bold text-[11px]">
-              <span>التوصية: {tawsya(o.kaed_tawsya)}</span>
+            <div className="flex justify-end items-center mt-1 font-bold text-[11px]">
               <span>التقييم النهائي: {toArabicDigits(o.decision) || 'لم يُحدد'}</span>
             </div>
           </div>

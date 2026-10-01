@@ -17,6 +17,7 @@ export async function getImportLogs() {
 export interface PhotoImportResult {
   personal: number;
   family: number;
+  couple: number;
   converted: number;
   officers: number;
   unmatched: number;
@@ -24,8 +25,8 @@ export interface PhotoImportResult {
   warnings: string[];
 }
 
-// Upload a batch of officer image files. The folder-relative path (which carries the
-// `family/` subfolder) is sent alongside so the server can tell personal vs family apart.
+// Upload a batch of officer image files. The folder-relative path is sent alongside so the
+// server can read the officer id from the officer's folder name.
 // Axios sends FormData as multipart with the correct boundary automatically.
 export async function importPhotos(files: File[]): Promise<PhotoImportResult> {
   const fd = new FormData();

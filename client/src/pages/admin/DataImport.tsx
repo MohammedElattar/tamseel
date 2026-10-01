@@ -115,12 +115,13 @@ export default function DataImport() {
     setPhotoBusy(true);
     setPhotoError('');
     setPhotoResult(null);
-    const agg: PhotoImportResult = { personal: 0, family: 0, converted: 0, officers: 0, unmatched: 0, skipped: 0, warnings: [] };
+    const agg: PhotoImportResult = { personal: 0, family: 0, couple: 0, converted: 0, officers: 0, unmatched: 0, skipped: 0, warnings: [] };
     try {
       for (let i = 0; i < photoFiles.length; i += PHOTO_BATCH) {
         const r = await importPhotos(photoFiles.slice(i, i + PHOTO_BATCH));
         agg.personal += r.personal || 0;
         agg.family += r.family || 0;
+        agg.couple += r.couple || 0;
         agg.converted += r.converted || 0;
         agg.unmatched += r.unmatched || 0;
         agg.skipped += r.skipped || 0;
@@ -396,7 +397,9 @@ export default function DataImport() {
         <div>
           <h3 className="font-bold text-gray-800 mb-1">استيراد صور الضباط</h3>
           <p className="text-sm text-gray-600 leading-relaxed">
-            اختر مجلد الصور: مجلد فرعي لكل ضابط باسم المعرّف (id)، بداخله الصورة الشخصية وصورة عائلية يحتوي اسمها كلمة <code dir="ltr">family</code>.
+            اختر مجلد الصور: مجلد فرعي لكل ضابط باسم المعرّف (id)، بداخله حتى ثلاث صور: الصورة العائلية يحتوي اسمها
+            كلمة <code dir="ltr">family</code>، وصورة الضابط وزوجته يحتوي اسمها كلمة <code dir="ltr">husband</code>،
+            والصورة الشخصية بأي اسم آخر.
             صور <code dir="ltr">TIFF</code> تُحوَّل تلقائياً، و<code dir="ltr">HEIC</code> يلزم تحويلها يدوياً.
           </p>
         </div>
@@ -435,6 +438,7 @@ export default function DataImport() {
             <div className="font-bold text-green-700">تم رفع الصور</div>
             <div>الصور الشخصية: {toArabicDigits(photoResult.personal)}</div>
             <div>الصور العائلية: {toArabicDigits(photoResult.family)}</div>
+            <div>صور الضابط وزوجته: {toArabicDigits(photoResult.couple)}</div>
             {photoResult.converted > 0 && (
               <div className="text-blue-700">صور تم تحويلها من TIFF إلى JPEG: {toArabicDigits(photoResult.converted)}</div>
             )}
@@ -446,7 +450,7 @@ export default function DataImport() {
             )}
             {photoResult.warnings.length > 0 && (
               <div className="mt-2 text-amber-800 text-xs space-y-0.5">
-                {photoResult.warnings.slice(0, 10).map((w, i) => <div key={i}>{w}</div>)}
+                {photoResult.warnings.slice(0, 10).map((w, i) => <div key={i}>{toArabicDigits(w)}</div>)}
                 {photoResult.warnings.length > 10 && <div>… {toArabicDigits(photoResult.warnings.length - 10)} أخرى</div>}
               </div>
             )}

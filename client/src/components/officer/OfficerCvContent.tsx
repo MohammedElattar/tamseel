@@ -1,38 +1,31 @@
 import { useState, ReactNode } from 'react';
 import { toArabicDigits, formatDate } from '../../utils/format';
+import { officerPhotoAlt, officerPhotoSrc } from '../../utils/officerPhoto';
+import type { OfficerPhotoKind } from '../../utils/officerPhoto';
 import OfficerPhoto from '../member/OfficerPhoto';
 
-function PhotosSection({ officerId, large }: { officerId: number; large?: boolean }) {
-  const [active, setActive] = useState(0);
-  const tabs = [
-    { id: 'personal', label: 'صورة له' },
-    { id: 'couple', label: 'صورة الضابط وزوجته' },
-    { id: 'family', label: 'صورة له مع العائلة' },
-  ];
+// The personal, couple and family photos side by side, so none of them hides behind a click.
+// Each frame shows the whole image (object-contain): couple and family photos come in mixed
+// portrait/landscape ratios. The preview steps through whichever of them loaded.
+function PhotosSection({ officerId }: { officerId: number }) {
+  const kinds = ['personal', 'couple', 'family'] as const;
+  const [loaded, setLoaded] = useState<Partial<Record<OfficerPhotoKind, boolean>>>({});
+  const gallery = kinds
+    .filter(k => loaded[k])
+    .map(k => ({ src: officerPhotoSrc(officerId, k), alt: officerPhotoAlt(k) }));
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div role="tablist" className="flex flex-wrap justify-center gap-2">
-        {tabs.map((t, i) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setActive(i)}
-            className={`min-h-[44px] rounded-lg border-2 px-4 py-2 text-base font-bold transition-colors ${
-              i === active ? 'border-blue-900 bg-blue-800 text-white' : 'border-gray-400 bg-white text-gray-900 hover:bg-gray-100'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="mt-2 w-full max-w-md">
+    <div className="grid gap-4 sm:grid-cols-3">
+      {kinds.map(kind => (
         <OfficerPhoto
+          key={kind}
           officerId={officerId}
-          kind={tabs[active].id as any}
+          kind={kind}
           fit="contain"
-          className="aspect-[4/5] w-full shadow-md rounded-xl"
+          className="h-[60dvh] w-full min-w-0 shadow-md"
+          gallery={gallery}
+          onStatus={ok => setLoaded(prev => (prev[kind] === ok ? prev : { ...prev, [kind]: ok }))}
         />
-      </div>
+      ))}
     </div>
   );
 }
@@ -133,7 +126,7 @@ function TableBody({ rows, cols, large }: { rows: any[]; cols: Col[]; large?: bo
               }`}
             >
               {cols.map(c => (
-                <td key={c.key} className={`${cell} ${large && (c.date || c.num) ? 'whitespace-nowrap' : ''}`}>
+                <td key={c.key} className={`${cell} ${large ? 'font-bold text-gray-900' : ''} ${large && (c.date || c.num) ? 'whitespace-nowrap' : ''}`}>
                   {c.date
                     ? formatDate(r[c.key]) || '-'
                     : c.num
@@ -412,7 +405,7 @@ export function buildCvSections(data: any, only: 'punishments' | undefined, big:
       ]
     : [
         { id: 'basic', label: 'البيانات الأساسية', content: <BasicGrid h={h} b={b} large={big} committeeType={data?.committee_type} childrenRows={data?.children} /> },
-        { id: 'photos', label: 'الصور', content: <PhotosSection officerId={h.id} large={big} /> },
+        { id: 'photos', label: 'الصور', content: <PhotosSection key={h.id} officerId={h.id} /> },
         { id: 'jobs', label: 'الوظائف السابقة', content: <TableBody rows={data?.jobs} cols={JOBS_COLS} large={big} /> },
         { id: 'kafaa', label: 'تقارير الكفاءة', content: <KafaaSection avg={data?.kafaa_avg} rows={data?.kafaa} large={big} /> },
         { id: 'paasat', label: 'البعثات والمأموريات', content: <TableBody rows={data?.paasat} cols={PAASAT_COLS} large={big} /> },
@@ -428,7 +421,7 @@ export function CvTabs({ sections, active, onChange, className = '' }: {
   sections: CvSection[]; active: number; onChange: (i: number) => void; className?: string;
 }) {
   return (
-    <div role="tablist" className={`flex flex-wrap gap-2 ${className}`}>
+    <div role="tablist" className={`flex flex-wrap gap-3 ${className}`}>
       {sections.map((s, i) => (
         <button
           key={s.id}
@@ -436,7 +429,7 @@ export function CvTabs({ sections, active, onChange, className = '' }: {
           role="tab"
           aria-selected={i === active}
           onClick={() => onChange(i)}
-          className={`min-h-[44px] rounded-lg border-2 px-4 py-2 text-base font-bold transition-colors ${
+          className={`min-h-[56px] rounded-xl border-2 px-6 py-2 text-xl font-bold transition-colors ${
             i === active
               ? 'border-blue-900 bg-blue-800 text-white'
               : 'border-gray-400 bg-white text-gray-900 hover:bg-gray-100'

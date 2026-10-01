@@ -1,5 +1,5 @@
 import { getDB } from '../db/connection.js';
-import { finalDecision } from '../config/decision.js';
+import { tamseelDecision } from '../config/decision.js';
 
 function mapRows(results: any[]): Record<string, any>[] {
   if (!results.length || !results[0].values.length) return [];
@@ -11,12 +11,12 @@ function mapRows(results: any[]): Record<string, any>[] {
   });
 }
 
-// Committee decision by member-opinion majority (ties favor the officer -> يستمر),
-// matching the legacy CALCULATE_SUMMARY. decision_code 0 = not decided (no votes).
+// Committee decision by opinion majority (ties favor the officer -> تصدق), matching the legacy
+// CALCULATE_SUMMARY. decision_code 0 = not decided (no votes), 1 = تصدق, 2 = لا يتصدق.
 export function calculateTagddedDecision(
   committeeId: number,
   officerId: number,
-  lagnaTypeC: number | null
+  _lagnaTypeC: number | null
 ): {
   accept: number;
   reject: number;
@@ -36,15 +36,15 @@ export function calculateTagddedDecision(
 
   const accept = rows.filter((r: any) => r.user_opinion === 1).length;
   const reject = rows.filter((r: any) => r.user_opinion === 0).length;
-  // Three-way tally: يؤجل (-1) wins only when it is the strict plurality; otherwise the
-  // يستمر/يحال majority decides (a tie between them favors the officer -> يستمر).
+  // A legacy postpone (-1) wins only as the strict plurality; otherwise the تصدق/لا يتصدق
+  // majority decides (a tie favors the officer -> تصدق).
   const postponeCount = rows.filter((r: any) => r.user_opinion === -1).length;
   const decision_code = rows.length === 0
     ? 0
     : postponeCount > accept && postponeCount > reject
       ? -1
       : accept >= reject ? 1 : 2;
-  const decision = decision_code === 0 ? '' : finalDecision(decision_code, lagnaTypeC);
+  const decision = decision_code === 0 ? '' : tamseelDecision(decision_code);
 
   return { accept, reject, postpone: postponeCount, decision, decision_code };
 }

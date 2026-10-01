@@ -1,11 +1,12 @@
 import { Router, Response } from 'express';
 import { getDB, saveDB } from '../db/connection.js';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth.js';
-import { finalDecision, tamseelDecision } from '../config/decision.js';
+import { tamseelDecision } from '../config/decision.js';
 import { finalizeTagddedDecisions } from '../services/scoringService.js';
 import { getBasis, totalMax, getServiceScore } from '../services/serviceScoreService.js';
 import { backupCommittee } from '../services/backupService.js';
 import { detectDisputes } from '../services/disputeService.js';
+import { SESSION_ORDER_BY } from '../services/sessionOrder.js';
 import { isCommanderSeat, deputyOf } from '../config/commander.js';
 
 const router = Router();
@@ -68,6 +69,42 @@ function findPrevChainCommittee(db: any, tamhidy: number, nashraDate: string | n
      ORDER BY (status = 'completed') DESC, id DESC LIMIT 1`,
     [prev, nashraDate]
   ))[0] ?? null;
+}
+
+// The committee's officers in session order (hidden ones included, for the callers to skip).
+function sessionOrder(db: any, committeeId: number): Record<string, any>[] {
+  return mapRows(db.exec(
+    `SELECT co.id, co.is_active, co.hidden, co.done
+     FROM committee_officers co
+     LEFT JOIN officer_categories cat ON cat.id = co.category_id
+     WHERE co.committee_id = ?
+     ORDER BY ${SESSION_ORDER_BY}`,
+    [committeeId]
+  ));
+}
+
+// An officer still waiting for the committee: visible and not finished.
+const isOpen = (o: Record<string, any>) => !Number(o.hidden) && !Number(o.done);
+
+// ترتيب اللجنة: the first time the session reaches a category, every screen shows that category's
+// intro until the commander presses متابعة. Returns what the intro shows — the name and how many
+// officers it holds — or null when nothing is pending.
+function pendingCategoryIntro(db: any, committeeId: number, categoryId: number): Record<string, any> | null {
+  const introduced = mapRows(db.exec(
+    'SELECT 1 FROM committee_category_intros WHERE committee_id = ? AND category_id = ?',
+    [committeeId, categoryId]
+  )).length > 0;
+  if (introduced) return null;
+  const category = mapRows(db.exec(
+    `SELECT cat.name, COUNT(*) AS officers
+     FROM committee_officers co
+     JOIN officer_categories cat ON cat.id = co.category_id
+     WHERE co.committee_id = ? AND co.category_id = ? AND co.hidden = 0
+     GROUP BY cat.id`,
+    [committeeId, categoryId]
+  ))[0];
+  if (!category) return null;
+  return { id: categoryId, name: category.name, officer_count: Number(category.officers) };
 }
 
 // متوسط تقارير الكفاءة (legacy KAFAA_AVERAGE): round(avg of the commander ratings) mapped to a
@@ -225,10 +262,12 @@ router.get('/current', (req: AuthRequest, res: Response) => {
             co.unit_name, co.job_name, co.l_lagna_type_c, co.ta3n_type, co.done,
             co.estifa, co.estifa_auto, co.final_eval, co.kaed_tawsya, lt.taraky_n,
             COALESCE(co.target_job, o.activ_note) AS target_job, co.interview_date,
-            o.off_notice, o.elhaq_unit
+            o.off_notice, o.elhaq_unit,
+            co.category_id, cat.name AS category_name
      FROM committee_officers co
      LEFT JOIN l_lagna_type lt ON co.l_lagna_type_c = lt.taraky_c
      LEFT JOIN officers o ON o.id = co.officer_id
+     LEFT JOIN officer_categories cat ON cat.id = co.category_id
      WHERE co.committee_id = ? AND co.is_active = 1 AND co.hidden = 0
      LIMIT 1`,
     [committee.id]
@@ -256,16 +295,13 @@ router.get('/current', (req: AuthRequest, res: Response) => {
   }
 
   // Whether a prev/next officer exists, so the commander's nav buttons can disable at the ends.
+  // التالي reaches every officer still open (see /advance), so it only turns into إنهاء once none
+  // is left.
   if (activeOfficer) {
-    const s = activeOfficer.serial as number;
-    activeOfficer.has_prev = mapRows(db.exec(
-      'SELECT 1 FROM committee_officers WHERE committee_id = ? AND hidden = 0 AND serial < ? LIMIT 1',
-      [committee.id, s]
-    )).length > 0;
-    activeOfficer.has_next = mapRows(db.exec(
-      'SELECT 1 FROM committee_officers WHERE committee_id = ? AND hidden = 0 AND done = 0 AND serial > ? LIMIT 1',
-      [committee.id, s]
-    )).length > 0;
+    const order = sessionOrder(db, committee.id);
+    const at = order.findIndex((o) => Number(o.is_active) === 1);
+    activeOfficer.has_prev = order.slice(0, at).some((o) => !Number(o.hidden));
+    activeOfficer.has_next = order.some((o, i) => i !== at && isOpen(o));
   }
 
   let myVote: Record<string, any> | null = null;
@@ -300,10 +336,7 @@ router.get('/current', (req: AuthRequest, res: Response) => {
             [prevC.id, activeOfficer.officer_id]
           ))[0];
           if (prev && prev.final_eval != null) {
-            prelim = finalDecision(
-              Number(prev.final_eval),
-              prev.l_lagna_type_c != null ? Number(prev.l_lagna_type_c) : null
-            ) || null;
+            prelim = tamseelDecision(prev.final_eval as string | number) || null;
           }
         }
       }
@@ -478,7 +511,11 @@ router.get('/current', (req: AuthRequest, res: Response) => {
     }));
   }
 
-  res.json({ committee, activeOfficer, myVote, evalItems, progress: { total, voted, apologies }, tally, memberVotes, memberStatuses, viewer });
+  const categoryIntro = activeOfficer?.category_id != null
+    ? pendingCategoryIntro(db, committee.id, Number(activeOfficer.category_id))
+    : null;
+
+  res.json({ committee, activeOfficer, myVote, evalItems, progress: { total, voted, apologies }, tally, memberVotes, memberStatuses, viewer, categoryIntro });
 });
 
 // GET /officer-cv/:officerId - officer CV summary (ملخص بيانات الضابط) sections.
@@ -1022,23 +1059,33 @@ router.post('/scores', (req: AuthRequest, res: Response) => {
     return;
   }
 
-  // Only THIS committee's manual بنود are settable; مسير الخدمة (computed) is ignored, and each
-  // score is clamped to 0..max_degree.
+  // Only THIS committee's manual بنود are settable; مسير الخدمة (computed) is ignored. A score is a
+  // whole number from 1 to the بند's max_degree (or null to clear it); anything else rejects the
+  // whole save before a row is written, so nothing above the maximum is ever stored.
   const items = mapRows(db.exec(
     'SELECT id, max_degree, kind FROM committee_eval_items WHERE committee_id = ?',
     [committee.id]
   ));
   const byId = new Map<number, any>(items.map((it: any) => [Number(it.id), it]));
 
+  const writes: Array<[number, number | null]> = [];
   for (const s of scores) {
     const itemId = Number(s?.item_id);
     const item = byId.get(itemId);
     if (!item || item.kind === 'computed') continue;
-    let val = s?.score === null || s?.score === '' || s?.score === undefined ? null : Number(s.score);
-    if (val != null) {
-      if (!Number.isFinite(val)) continue;
-      val = Math.max(0, Math.min(val, Number(item.max_degree)));
+    if (s?.score === null || s?.score === '' || s?.score === undefined) {
+      writes.push([itemId, null]);
+      continue;
     }
+    const val = Number(s.score);
+    if (!Number.isInteger(val) || val < 1 || val > Number(item.max_degree)) {
+      res.status(400).json({ error: 'الدرجة يجب أن تكون عدداً صحيحاً من ١ حتى الحد الأقصى للبند' });
+      return;
+    }
+    writes.push([itemId, val]);
+  }
+
+  for (const [itemId, val] of writes) {
     db.run(
       `INSERT INTO member_item_scores (committee_id, user_id, officer_id, item_id, score, updated_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))
@@ -1060,6 +1107,39 @@ router.post('/scores', (req: AuthRequest, res: Response) => {
 
   saveDB();
   res.json({ message: 'تم حفظ التقييم' });
+});
+
+// POST /category-intro/continue - متابعة on the category intro screen, commander/deputy only. Marks
+// the active officer's category as introduced, so every screen moves on to the officer.
+router.post('/category-intro/continue', (req: AuthRequest, res: Response) => {
+  const db = getDB();
+  if (!isCommanderSeat(req.user!.username)) {
+    res.status(403).json({ error: 'غير مصرح - متاح للقائد ونائبه فقط' });
+    return;
+  }
+  const committee = mapRows(db.exec(
+    `SELECT c.id FROM committees c
+     JOIN committee_member_assignments cma ON cma.committee_id = c.id
+     WHERE c.is_active = 1 AND cma.user_id = ? AND cma.included = 1
+     LIMIT 1`,
+    [req.user!.id]
+  ))[0];
+  if (!committee) {
+    res.status(403).json({ error: 'لا توجد لجنة نشطة متاحة لك' });
+    return;
+  }
+  const active = mapRows(db.exec(
+    'SELECT category_id FROM committee_officers WHERE committee_id = ? AND is_active = 1 LIMIT 1',
+    [committee.id]
+  ))[0];
+  if (active?.category_id != null) {
+    db.run(
+      'INSERT OR IGNORE INTO committee_category_intros (committee_id, category_id) VALUES (?, ?)',
+      [committee.id, active.category_id]
+    );
+    saveDB();
+  }
+  res.json({ message: 'تم' });
 });
 
 // POST /advance - commander/deputy (EVAL1/EVAL9) moves the active officer next/prev.
@@ -1089,13 +1169,20 @@ router.post('/advance', (req: AuthRequest, res: Response) => {
   }
 
   const current = mapRows(db.exec(
-    'SELECT id, serial FROM committee_officers WHERE committee_id = ? AND is_active = 1 LIMIT 1',
+    'SELECT id, category_id FROM committee_officers WHERE committee_id = ? AND is_active = 1 LIMIT 1',
     [committee.id]
   ))[0];
-  const curSerial = current ? (current.serial as number) : direction === 'next' ? -1 : Number.MAX_SAFE_INTEGER;
 
-  // Legacy التالي gate: the commander must have cast his own vote first, and all included
-  // members must have finished the current officer, before advancing to the next one.
+  // A category intro still on screen is dismissed with متابعة before moving forward.
+  if (direction === 'next' && current?.category_id != null
+    && pendingCategoryIntro(db, committee.id, Number(current.category_id))) {
+    res.status(400).json({ error: 'برجاء الضغط على متابعة أولاً' });
+    return;
+  }
+
+  // التالي gate: the commander must have cast his own vote first. Unlike the legacy form he does
+  // not wait for every member to finish scoring; once the officer is done, a late /scores save
+  // for it is refused.
   if (direction === 'next' && current) {
     const active = mapRows(db.exec(
       'SELECT officer_id, ta3n_type FROM committee_officers WHERE id = ?',
@@ -1116,36 +1203,17 @@ router.post('/advance', (req: AuthRequest, res: Response) => {
         res.status(400).json({ error: 'برجاء اتخاذ القرار (تصدق / لا يتصدق) أولاً' });
         return;
       }
-      const total = (mapRows(db.exec(
-        'SELECT COUNT(*) c FROM committee_member_assignments WHERE committee_id = ? AND included = 1',
-        [committee.id]
-      ))[0]?.c as number) ?? 0;
-      // All included members must have FINISHED their scores (eval_state = 1) before advancing.
-      const voted = (mapRows(db.exec(
-        `SELECT COUNT(DISTINCT mv.user_id) c FROM member_votes mv
-         JOIN committee_member_assignments cma ON cma.committee_id = mv.committee_id AND cma.user_id = mv.user_id
-         WHERE mv.committee_id = ? AND mv.officer_id = ? AND mv.ta3n_type = ? AND mv.eval_state = 1 AND cma.included = 1`,
-        [committee.id, officerId, ta3n]
-      ))[0]?.c as number) ?? 0;
-      if (voted < total) {
-        res.status(400).json({ error: 'برجاء الإنتظار لحين إنتهاء جميع الأعضاء من التقييم' });
-        return;
-      }
     }
   }
 
-  let target: Record<string, any> | undefined;
-  if (direction === 'next') {
-    target = mapRows(db.exec(
-      'SELECT id FROM committee_officers WHERE committee_id = ? AND hidden = 0 AND done = 0 AND serial > ? ORDER BY serial LIMIT 1',
-      [committee.id, curSerial]
-    ))[0];
-  } else {
-    target = mapRows(db.exec(
-      'SELECT id FROM committee_officers WHERE committee_id = ? AND hidden = 0 AND serial < ? ORDER BY serial DESC LIMIT 1',
-      [committee.id, curSerial]
-    ))[0];
-  }
+  // With no active officer, next starts from the first officer and prev from the last. Next never
+  // leaves an officer behind: past the last open one in the order it wraps to the earliest still
+  // open (a session started mid-order), so the committee only finishes once none is left.
+  const order = sessionOrder(db, committee.id);
+  const at = current ? order.findIndex((o) => o.id === current.id) : -1;
+  const target = direction === 'next'
+    ? order.slice(at + 1).find(isOpen) ?? order.slice(0, Math.max(at, 0)).find(isOpen)
+    : order.slice(0, at >= 0 ? at : order.length).reverse().find((o) => !Number(o.hidden));
 
   if (direction === 'prev') {
     // Prev goes back to the previous officer and RE-OPENS it (clears done) so it becomes

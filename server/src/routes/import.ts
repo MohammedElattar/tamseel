@@ -18,10 +18,11 @@ const uploadPhotos = multer({
 }).array('files');
 
 const IMG_EXT = /\.(jpe?g|png|gif|webp|bmp)$/i;
-// A file is the family photo when its filename carries a family marker (Latin or Arabic).
-// The personal photo is simply the other image (any name), so only the family one needs a marker.
+// Each officer has up to three photos, told apart by filename markers (Latin or Arabic): the
+// husband-and-wife photo (husband.jpg …), the family photo (family.jpg …), and the personal
+// photo — any other image name (e.g. 1.jpg), so only the first two need a marker.
 const FAMILY_RE = /family|عائلي|عائلة|اسر[ةه]|أسر[ةه]/i;
-const COUPLE_RE = /couple|زوجة|زوج|زوجين/i;
+const COUPLE_RE = /husband|wife|couple|زوجين|زوجة|زوج/i;
 
 // Guard against non-image files that live alongside photos (Thumbs.db, .DS_Store, …).
 // Accepts only formats a browser can render inside <img>; that is what the voting/report
@@ -130,10 +131,10 @@ router.post('/', (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /photos - import officer portraits + family photos as a batch of image files.
+// POST /photos - import officer photos (personal, family, husband-and-wife) as a batch of files.
 // Layout: pick one top folder (e.g. `photos`) that holds a subfolder per officer named by
-// the officer id; each subfolder has up to two images — the family one has a family marker in
-// its filename (family.jpg / عائلية…), the other (any name, any image extension) is personal.
+// the officer id; each subfolder has up to three images, typed by filename (see COUPLE_RE /
+// FAMILY_RE above): husband.jpg, family.jpg, and the personal photo under any other name.
 // The id is read from the image's immediate parent folder (so any wrapper folder above it is
 // ignored), falling back to the filename for a flat `123456.jpg` layout. TIFF images (often
 // exported with a .jpg name) are transcoded to JPEG so browsers can display them. Stored in
@@ -156,8 +157,10 @@ router.post('/photos', (req: AuthRequest, res: Response) => {
     }
 
     const warnings: string[] = [];
-    let personal = 0, family = 0, skipped = 0, converted = 0;
+    let personal = 0, family = 0, couple = 0, skipped = 0, converted = 0;
     const seen = new Set<number>();
+    // officer:type pairs already written in this batch; a repeat overwrites the earlier image.
+    const seenTypes = new Set<string>();
 
     // Collect a few example filenames per skip reason so the admin can see exactly what to fix
     // (capped to keep the response small on large uploads).
@@ -165,6 +168,7 @@ router.post('/photos', (req: AuthRequest, res: Response) => {
     const invalidSamples: string[] = [];
     const extSamples: string[] = [];
     const noIdSamples: string[] = [];
+    const dupSamples: string[] = [];
     const cap = (arr: string[], s: string) => { if (arr.length < 8) arr.push(s); };
 
     db.run('BEGIN');
@@ -197,15 +201,17 @@ router.post('/photos', (req: AuthRequest, res: Response) => {
         const officerId = parseOfficerId(parentDir) ?? parseOfficerId(base.replace(/\.[^.]+$/, ''));
         if (officerId == null) { skipped++; cap(noIdSamples, rel || base); return; }
 
-        // The family image is flagged by its own filename; the other image (any name) is personal.
+        // Husband-and-wife / family photos are flagged by their filenames; any other image is personal.
         const col = COUPLE_RE.test(base) ? 'couple' : (FAMILY_RE.test(base) ? 'family' : 'personal');
+        const typeKey = `${officerId}:${col}`;
+        if (seenTypes.has(typeKey)) cap(dupSamples, rel || base); else seenTypes.add(typeKey);
         db.run(
           `INSERT INTO officer_photos (officer_id, ${col}, updated_at)
            VALUES (?, ?, datetime('now'))
            ON CONFLICT(officer_id) DO UPDATE SET ${col} = excluded.${col}, updated_at = excluded.updated_at`,
           [officerId, new Uint8Array(imgBuf)]
         );
-        if (col === 'family') family++; else personal++;
+        if (col === 'couple') couple++; else if (col === 'family') family++; else personal++;
         seen.add(officerId);
       });
       db.run('COMMIT');
@@ -223,17 +229,26 @@ router.post('/photos', (req: AuthRequest, res: Response) => {
     if (invalidSamples.length) warnings.push(`ملفات ليست صوراً صالحة: ${invalidSamples.join(' | ')}`);
     if (extSamples.length) warnings.push(`امتدادات غير مدعومة (المسموح: jpg, jpeg, png, gif, webp, bmp): ${extSamples.join(' | ')}`);
     if (noIdSamples.length) warnings.push(`تعذر استخراج المعرّف (id) من: ${noIdSamples.join(' | ')}`);
+    if (dupSamples.length) {
+      warnings.push(`أكثر من صورة من نفس النوع لنفس الضابط (حُفظت الأخيرة فقط) — اجعل اسم صورة العائلة يحتوي family وصورة الزوجين husband: ${dupSamples.join(' | ')}`);
+    }
 
-    // How many of the uploaded ids have no matching officer yet (photo kept anyway — it
-    // will match once that officer is imported).
-    let unmatched = 0;
+    // Uploaded ids with no matching officer yet (photo kept anyway — it will match once that
+    // officer is imported). Named in a warning, since a mistyped folder name is the usual cause.
+    const unmatchedIds: number[] = [];
     for (const oid of seen) {
       const hit = db.exec('SELECT 1 FROM officers WHERE id = ? LIMIT 1', [oid]);
-      if (!(hit.length && hit[0].values.length)) unmatched++;
+      if (!(hit.length && hit[0].values.length)) unmatchedIds.push(oid);
+    }
+    if (unmatchedIds.length) {
+      warnings.push(`مجلدات بمعرّف لا يطابق أي ضابط حالياً — تأكد من اسم المجلد: ${unmatchedIds.slice(0, 8).join(' | ')}`);
     }
 
     saveDB();
-    res.json({ status: 'success', personal, family, converted, officers: seen.size, unmatched, skipped, warnings });
+    res.json({
+      status: 'success', personal, family, couple, converted,
+      officers: seen.size, unmatched: unmatchedIds.length, skipped, warnings,
+    });
   });
 });
 

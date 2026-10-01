@@ -3,12 +3,13 @@ import bcrypt from 'bcryptjs';
 import { getDB, saveDB } from '../db/connection.js';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth.js';
 import { COMMITTEE_PANEL } from '../config/committeePanel.js';
-import { finalDecision, kaedTawsyaFromText, tamseelDecision } from '../config/decision.js';
+import { kaedTawsyaFromText, tamseelDecision } from '../config/decision.js';
 import {
   calculateTagddedDecision, finalizeTagddedDecisions,
 } from '../services/scoringService.js';
 import { backupCommittee, listBackups, restoreCommittee } from '../services/backupService.js';
 import { resolvePanelIdentities } from '../services/panelMembers.js';
+import { SESSION_ORDER_BY, resequenceByCategory } from '../services/sessionOrder.js';
 
 const DEFAULT_MEMBER_PASSWORD = 'member123';
 
@@ -460,6 +461,7 @@ router.post('/:id/load-officers', requireAdmin, (req: AuthRequest, res: Response
   ));
 
   db.run('DELETE FROM committee_officers WHERE committee_id = ?', [committeeId]);
+  db.run('DELETE FROM committee_category_intros WHERE committee_id = ?', [committeeId]);
 
   eligible.forEach((c: any, i: number) => {
     db.run(
@@ -561,10 +563,12 @@ router.get('/:id/officers', (req: AuthRequest, res: Response) => {
             co.akdam_no, co.akdam_rep, co.l_lagna_type_c, co.estifa, co.estifa_auto,
             COALESCE(co.target_job, o.activ_note) AS target_job, co.interview_date,
             lt.taraky_n as lagna_type_name,
-            o.kind_code, o.spec_branch_code
+            o.kind_code, o.spec_branch_code,
+            co.category_id, cat.name AS category_name
      FROM committee_officers co
      JOIN officers o ON co.officer_id = o.id
      LEFT JOIN l_lagna_type lt ON co.l_lagna_type_c = lt.taraky_c
+     LEFT JOIN officer_categories cat ON cat.id = co.category_id
      WHERE ${clauses.join(' AND ')}
      ORDER BY co.serial`,
     params
@@ -577,7 +581,8 @@ router.get('/:id/officers', (req: AuthRequest, res: Response) => {
 // Each entry is { officer_id, ta3n_type }, because an edarya officer can be registered under
 // several case types and each of those is its own row. Defined before /:id/officers/:officerId
 // so "reorder" isn't captured as :officerId. Every officer query orders by serial, so this
-// drives the session list, the member voting order and the printed reports alike.
+// drives the session list, the member voting order and the printed reports alike. A drag only
+// reorders officers inside their ترتيب اللجنة category; the categories keep their order.
 router.patch('/:id/officers/reorder', requireAdmin, (req: AuthRequest, res: Response) => {
   const db = getDB();
   const committeeId = Number(req.params.id);
@@ -603,6 +608,7 @@ router.patch('/:id/officers/reorder', requireAdmin, (req: AuthRequest, res: Resp
       );
     }
   });
+  resequenceByCategory(db, committeeId);
 
   saveDB();
   res.json({ message: 'تم تحديث الترتيب' });
@@ -653,6 +659,17 @@ router.patch('/:id/officers/:officerId', requireAdmin, (req: AuthRequest, res: R
     updates.push('interview_date = ?');
     params.push(body.interview_date === null || body.interview_date === '' ? null : String(body.interview_date));
   }
+  // ترتيب اللجنة: null clears the officer's category; otherwise it must be an existing one.
+  if (body.category_id !== undefined) {
+    const categoryId = body.category_id === null || body.category_id === '' ? null : Number(body.category_id);
+    if (categoryId != null && (!Number.isInteger(categoryId)
+      || !mapRows(db.exec('SELECT 1 FROM officer_categories WHERE id = ?', [categoryId])).length)) {
+      res.status(400).json({ error: 'الترتيب غير موجود' });
+      return;
+    }
+    updates.push('category_id = ?');
+    params.push(categoryId);
+  }
 
   if (!updates.length) {
     res.status(400).json({ error: 'لا توجد حقول للتحديث' });
@@ -675,11 +692,13 @@ router.patch('/:id/officers/:officerId', requireAdmin, (req: AuthRequest, res: R
     `UPDATE committee_officers SET ${updates.join(', ')} WHERE committee_id = ? AND officer_id = ? ${scope}`,
     params
   );
+  // A new category moves the officer into its group, so المسلسل follows.
+  if (body.category_id !== undefined) resequenceByCategory(db, committeeId);
   saveDB();
   res.json({ message: 'تم التحديث' });
 });
 
-// Session grid: all committee officers with their status flags, ordered by serial.
+// Session grid (ترتيب العرض): all committee officers with their status flags, in session order.
 router.get('/:id/session-officers', (req: AuthRequest, res: Response) => {
   const db = getDB();
   const committeeId = Number(req.params.id);
@@ -693,11 +712,13 @@ router.get('/:id/session-officers', (req: AuthRequest, res: Response) => {
             co.is_active, co.done, co.hidden, co.attendance, co.dispute, co.dont_print, co.kaed_tawsya,
             co.ta3n_type, co.apology, co.notes, co.apology_reason,
             co.notes_text, co.notes_retirement_date, co.notes_retirement_reason,
-            COALESCE(co.target_job, o.activ_note) AS target_job, co.interview_date
+            COALESCE(co.target_job, o.activ_note) AS target_job, co.interview_date,
+            co.category_id, cat.name AS category_name
      FROM committee_officers co
      JOIN officers o ON o.id = co.officer_id
+     LEFT JOIN officer_categories cat ON cat.id = co.category_id
      WHERE co.committee_id = ?
-     ORDER BY co.serial`,
+     ORDER BY ${SESSION_ORDER_BY}`,
     [committeeId]
   ));
 
@@ -830,6 +851,8 @@ router.post('/:id/officers/bulk', requireAdmin, (req: AuthRequest, res: Response
       // If the committee was already ended (إنهاء اللجنة → completed), un-lock it back to draft so it
       // can be run again; otherwise it stays "completed" and the reset appears to do nothing.
       db.run("UPDATE committees SET status = 'draft' WHERE id = ? AND status = 'completed'", [committeeId]);
+      // The rerun shows every category's intro screen again.
+      db.run('DELETE FROM committee_category_intros WHERE committee_id = ?', [committeeId]);
       break;
     // "حذف تقييمات الأعضاء": clear every member's بند scores + votes so the evaluation can be redone,
     // and re-open the officers (done / final decision reset). A backup is taken first.
@@ -839,6 +862,7 @@ router.post('/:id/officers/bulk', requireAdmin, (req: AuthRequest, res: Response
       db.run('UPDATE member_votes SET user_opinion = 2, eval_state = 0 WHERE committee_id = ?', [committeeId]);
       db.run('UPDATE committee_officers SET done = 0, final_eval = NULL WHERE committee_id = ?', [committeeId]);
       db.run("UPDATE committees SET status = 'draft' WHERE id = ? AND status = 'completed'", [committeeId]);
+      db.run('DELETE FROM committee_category_intros WHERE committee_id = ?', [committeeId]);
       break;
     default:
       res.status(400).json({ error: 'إجراء غير معروف' });
@@ -891,10 +915,7 @@ router.get('/:id/reports/voting-summary', (req: AuthRequest, res: Response) => {
 
   const officers = officersRaw.map(o => ({
     ...o,
-    decision: finalDecision(
-      o.final_eval != null ? Number(o.final_eval) : null,
-      o.l_lagna_type_c != null ? Number(o.l_lagna_type_c) : null
-    ),
+    decision: tamseelDecision(o.final_eval as string | null),
   }));
 
   const votes = mapRows(db.exec(
@@ -1084,7 +1105,7 @@ router.get('/:id/decisions', (req: AuthRequest, res: Response) => {
     const storedEval = [1, 2, -1, '1', '2', '-1'].includes(o.final_eval as any)
       ? Number(o.final_eval) : null;
     const code = storedEval ?? d.decision_code;
-    const decision = code === 0 ? '' : finalDecision(code, lagnaTypeC);
+    const decision = code === 0 ? '' : tamseelDecision(code);
     return { ...o, ...d, decision, decision_code: code };
   });
 
@@ -1563,6 +1584,7 @@ router.delete('/:id', requireAdmin, (req: AuthRequest, res: Response) => {
   db.run('DELETE FROM member_votes WHERE committee_id = ?', [id]);
   db.run('DELETE FROM committee_member_assignments WHERE committee_id = ?', [id]);
   db.run('DELETE FROM committee_officers WHERE committee_id = ?', [id]);
+  db.run('DELETE FROM committee_category_intros WHERE committee_id = ?', [id]);
   db.run('DELETE FROM committee_backups WHERE committee_id = ?', [id]);
   // Break the tamhidy back-reference from any main committee that pointed here.
   db.run('UPDATE committees SET prev_tamhidy_committee_id = NULL WHERE prev_tamhidy_committee_id = ?', [id]);

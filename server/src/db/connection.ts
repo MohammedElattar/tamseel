@@ -156,6 +156,10 @@ function runMigrations(database: Database): void {
     'ALTER TABLE users ADD COLUMN rank_name TEXT',
     // لغة إنجليزية: admin-entered بند score per officer (computed بند, like مسير الخدمة %).
     'ALTER TABLE officer_service_score ADD COLUMN english REAL',
+    // ترتيب اللجنة: the officer's category within the committee.
+    'ALTER TABLE committee_officers ADD COLUMN category_id INTEGER',
+    // ترتيب اللجنة: the categories' global presentation order.
+    'ALTER TABLE officer_categories ADD COLUMN position INTEGER NOT NULL DEFAULT 0',
   ];
   for (const sql of additions) {
     try {
@@ -168,6 +172,9 @@ function runMigrations(database: Database): void {
   // المحاكمات/الجزاءات are one merged table again; drop the short-lived, now-unused
   // officer_mo7akmat (empty on any DB that briefly had it). No-op on a fresh DB.
   try { database.run('DROP TABLE IF EXISTS officer_mo7akmat'); } catch { /* ignore */ }
+  // ترتيب اللجنة briefly kept a per-committee category order; the order is global now
+  // (officer_categories.position) and intro state lives in committee_category_intros.
+  try { database.run('DROP TABLE IF EXISTS committee_category_order'); } catch { /* ignore */ }
 
   dedupeOfficersInNashra(database);
   migrateMemberVotesTa3n(database);

@@ -7,6 +7,28 @@ import type { CvSection } from '../../components/officer/OfficerCvContent';
 import OfficerPhoto from '../../components/member/OfficerPhoto';
 import BackButton from '../../components/member/BackButton';
 
+// Members get only these sections of the officer file (الصور / الوظائف السابقة / تقارير الكفاءة);
+// the admin officer page still shows the full file.
+const MEMBER_SECTIONS = ['photos', 'jobs', 'kafaa'];
+
+// One header fact as a pill: the label on a tinted segment, the value beside it.
+function HeaderField({ label, value, grow, valueClassName = 'text-2xl' }: {
+    label: string; value: string; grow?: boolean; valueClassName?: string;
+}) {
+    return (
+        <div className={`flex items-stretch overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm ${
+            grow ? 'min-w-[16rem] flex-1' : 'shrink-0'
+        }`}>
+            <span className="flex min-w-[6rem] shrink-0 items-center justify-center border-e border-blue-200 bg-blue-50 px-3 text-lg font-bold text-blue-900">
+                {label}
+            </span>
+            <span className={`min-w-0 px-4 py-1.5 font-bold text-gray-900 break-words ${valueClassName}`}>
+                {value || '-'}
+            </span>
+        </div>
+    );
+}
+
 // Full-screen officer file (ملخص بيانات الضابط / الجزاءات والمحاكمات / ملخص الإتهام / ملخص الموضوع /
 // رأى جهاز العمل النفسى), reached from the voting screen's footer. It replaces the old modal so the
 // member reads the file on its own page and returns with an unmistakable back button. Access is
@@ -28,7 +50,8 @@ export default function OfficerCvScreen() {
     // The case / نفسي pages are each one section, titled like the footer button that opens them
     // (ملخص الإتهام for أحكام حبس, ملخص الموضوع otherwise; رأى جهاز العمل النفسى for nafsy), with the
     // case file as the body. Every other view uses the shared CV builder unchanged.
-    const sections: CvSection[] = !data ? [] : buildCvSections(data, only, true);
+    const sections: CvSection[] = !data ? [] : buildCvSections(data, only, true)
+        .filter(s => only || MEMBER_SECTIONS.includes(s.id));
     const tabId = params.get('tab');
     const savedIdx = tabId ? sections.findIndex(s => s.id === tabId) : -1;
     const idx = sections.length ? (savedIdx >= 0 ? savedIdx : 0) : 0;
@@ -89,11 +112,9 @@ export default function OfficerCvScreen() {
     }, [officerId]);
 
     const h = data?.header || {};
-    // Legacy header identity, unlabelled: seniority, rank and name on one line; the unit and
-    // job on the next; the specialization last. Each part is dropped when it has no value.
-    const line1 = [h.akdam_no, h.akdam_rep, h.rank_name, h.per_name].map(toArabicDigits).filter(Boolean).join(' ');
-    const line2 = [h.unit_name, h.job_name].map(toArabicDigits).filter(Boolean).join(' / ');
-    const line3 = toArabicDigits(h.spec_name);
+    const seniority = [h.akdam_no, h.akdam_rep].map(toArabicDigits).filter(Boolean).join(' ');
+    const job = [h.unit_name, h.job_name].map(toArabicDigits).filter(Boolean).join(' / ');
+    const spec = toArabicDigits(h.spec_name);
     const idNum = Number(officerId);
     const hasOfficer = Number.isInteger(idNum);
 
@@ -105,11 +126,21 @@ export default function OfficerCvScreen() {
             <div className="flex flex-col overflow-hidden rounded-xl border-2 border-gray-300 bg-white shadow-sm lg:max-h-full">
                 <div className="flex shrink-0 items-start justify-between gap-4 px-4 py-3">
                     <div className="flex min-w-0 flex-1 flex-col gap-3 h-full justify-between">
-                        <div className="space-y-1">
-                            {line1 && <p className="text-2xl font-bold text-gray-900 break-words">{line1}</p>}
-                            {line2 && <p className="text-lg font-bold text-gray-800 break-words">{line2}</p>}
-                            {line3 && <p className="text-lg font-bold text-gray-800 break-words">{line3}</p>}
-                        </div>
+                        {/* The legacy header facts (اقدمية / رتبة / اسم, then الوظيفة), each labelled.
+                            التخصص has no legacy box; it joins the second row only when the officer has one. */}
+                        {data && (
+                            <div className="space-y-2">
+                                <div className="flex flex-wrap gap-2">
+                                    <HeaderField label="اقدمية" value={seniority} />
+                                    <HeaderField label="رتبة" value={toArabicDigits(h.rank_name)} />
+                                    <HeaderField label="اسم" value={toArabicDigits(h.per_name)} grow />
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <HeaderField label="الوظيفة" value={job} grow valueClassName="text-xl" />
+                                    {spec && <HeaderField label="التخصص" value={spec} valueClassName="text-xl" />}
+                                </div>
+                            </div>
+                        )}
                         {/* Section tabs, grouped in one bar beside the portrait. The single-section
                             case pages (ملخص الإتهام / ملخص الموضوع / رأى جهاز العمل النفسى) hide the tab —
                             it would only repeat the page's own heading. */}

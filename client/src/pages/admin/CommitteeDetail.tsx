@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getCommittee, loadMembers, setMemberIncluded,
@@ -11,12 +11,15 @@ import {
   createCommitteeMember, removeCommitteeMember,
   getEvalItems, loadEvalItems, updateEvalItems,
 } from '../../api/committees';
+import { getCategories } from '../../api/categories';
+import type { OfficerCategory } from '../../api/categories';
 import { searchOfficers } from '../../api/officers';
 import { getVotingStatus, calculateDecisions } from '../../api/evaluations';
 import VoteBreakdown from '../../components/VoteBreakdown';
 import { getLagnaTypes, getTa3nTypes, getRanks } from '../../api/lookup';
 import { useLiveUpdates } from '../../hooks/useLiveUpdates';
 import ArabicDate from '../../components/ArabicDate';
+import DragHandle from '../../components/DragHandle';
 import { toArabicDigits, toWesternDigits, formatDate } from '../../utils/format';
 import CommitteeServiceScores from './CommitteeServiceScores';
 
@@ -26,17 +29,6 @@ const NOTES_RETIREMENT_REASONS = [
   'المادة 109',
   'المادة 138',
 ];
-
-// Grip shown in the first column of every drag-to-reorder table.
-function DragHandle() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
-      <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-      <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-    </svg>
-  );
-}
 
 const TAGDDED_TABS = [
   { id: 'members', label: 'الأعضاء' },
@@ -63,10 +55,9 @@ const KIND_OPTIONS = [
   { value: 4, label: 'مد/سا' },
 ];
 
-const typeLabels: Record<string, string> = {
-  tagdded: 'تجديد وترقي',
-  edarya: 'إدارية / قضائية',
-};
+// لشغل وظيفة filter sentinels; real jobs are free text and never take these values.
+const ALL_JOBS = '__all__';
+const NO_JOB = '__none__';
 
 const statusLabels: Record<string, string> = {
   draft: 'مسودة',
@@ -96,6 +87,9 @@ export default function CommitteeDetail() {
   const [lagnaTypes, setLagnaTypes] = useState<any[]>([]);
   const [officerKind, setOfficerKind] = useState(5);
   const [officerLagnaType, setOfficerLagnaTypeFilter] = useState(1000);
+  const [jobFilter, setJobFilter] = useState(ALL_JOBS);
+  // Typed لشغل وظيفة values not yet saved (saved on blur).
+  const [jobDrafts, setJobDrafts] = useState<Record<number, string>>({});
 
   // Manual member creation (custom members beyond the fixed commander panel).
   const emptyMemberForm = { username: '', display_name: '', rank_name: '', job_title: '' };
@@ -139,12 +133,19 @@ export default function CommitteeDetail() {
     getRanks().then(setRanks).catch(() => {});
   }, []);
 
-  const fetchOfficers = useCallback(async () => {
+  // Opening the tab lists the officers by المسلسل. Refreshes while it is open (keepOrder) leave the
+  // rows where they are: assigning a ترتيب اللجنة category renumbers المسلسل, and the row being
+  // edited must not jump away. The new numbers show in place; the next visit sorts by them.
+  const fetchOfficers = useCallback(async (keepOrder = false) => {
     const data = await getCommitteeOfficers(committeeId, {
       kind: officerKind,
       lagna_type_code: officerLagnaType,
     });
-    setOfficers(data);
+    setOfficers(prev => {
+      if (!keepOrder || !prev.length) return data;
+      const place = new Map<number, number>(prev.map((o, i) => [o.officer_id, i]));
+      return [...data].sort((a, b) => (place.get(a.officer_id) ?? Infinity) - (place.get(b.officer_id) ?? Infinity));
+    });
   }, [committeeId, officerKind, officerLagnaType]);
 
   useEffect(() => {
@@ -180,8 +181,38 @@ export default function CommitteeDetail() {
   // بيانات الضباط: inline edit of لشغل وظيفة / تاريخ المقابلة per candidate.
   const handleOfficerField = async (officerId: number, field: string, value: any) => {
     setOfficers(prev => prev.map(o => (o.officer_id === officerId ? { ...o, [field]: value } : o)));
-    try { await updateOfficerFlags(committeeId, officerId, { [field]: value }); } catch { fetchOfficers(); }
+    try {
+      await updateOfficerFlags(committeeId, officerId, { [field]: value });
+      // A category renumbers المسلسل, so bring the new numbers in (rows stay put).
+      if (field === 'category_id') fetchOfficers(true);
+    } catch {
+      fetchOfficers(true);
+    }
   };
+
+  // ترتيب اللجنة values for the بيانات الضباط dropdown, in their presentation order.
+  const [categories, setCategories] = useState<OfficerCategory[]>([]);
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => {});
+  }, []);
+
+  // بيانات الضباط filter by لشغل وظيفة. It reads saved values only (drafts stay out until blur),
+  // so a row never disappears while its job is being typed.
+  const jobOf = (o: any) => String(o.target_job ?? '').trim();
+  const jobCounts = new Map<string, number>();
+  for (const o of officers) jobCounts.set(jobOf(o), (jobCounts.get(jobOf(o)) ?? 0) + 1);
+  const jobOptions = Array.from(jobCounts.keys()).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ar'));
+  const hasNoJob = jobCounts.has('');
+  // A choice that no longer matches any officer (after an edit) falls back to الكل.
+  const activeJobFilter =
+    jobFilter === NO_JOB ? (hasNoJob ? NO_JOB : ALL_JOBS)
+      : jobFilter === ALL_JOBS || jobCounts.has(jobFilter) ? jobFilter : ALL_JOBS;
+  const shownOfficers = activeJobFilter === ALL_JOBS
+    ? officers
+    : officers.filter(o => (activeJobFilter === NO_JOB ? !jobOf(o) : jobOf(o) === activeJobFilter));
+  const officersCountLabel = `مجموع الضباط: ${toArabicDigits(shownOfficers.length)}${
+    activeJobFilter === ALL_JOBS ? '' : ` من ${toArabicDigits(officers.length)}`
+  }`;
 
   const handleOfficerLagnaChange = async (officerId: number, lagnaTypeC: number) => {
     setOfficers(prev =>
@@ -190,7 +221,7 @@ export default function CommitteeDetail() {
     try {
       await setOfficerLagnaType(committeeId, officerId, lagnaTypeC);
     } catch {
-      fetchOfficers();
+      fetchOfficers(true);
     }
   };
 
@@ -203,7 +234,7 @@ export default function CommitteeDetail() {
     if (!window.confirm(`هل أنت متأكد من حذف الضابط "${name}" من اللجنة؟`)) return;
     try {
       await removeCommitteeOfficer(committeeId, officerId);
-      await fetchOfficers();
+      await fetchOfficers(true);
       await fetchSessionOfficers();
     } catch (err: any) {
       alert(err?.response?.data?.error || 'تعذر حذف الضابط');
@@ -470,20 +501,39 @@ export default function CommitteeDetail() {
   // voting order members see and the order the reports print in.
   const [officerDragIndex, setOfficerDragIndex] = useState<number | null>(null);
 
+  // ترتيب العرض lists the officers in session order: grouped by ترتيب اللجنة category (in the order
+  // set on the categories page), المسلسل inside each group.
+  const categoryKey = (o: any): number | null => o.category_id ?? null;
+  const showCategoryGroups = sessionOfficers.some(o => o.category_id != null);
+  const categoryCounts = new Map<number | null, number>();
+  sessionOfficers.forEach(o => categoryCounts.set(categoryKey(o), (categoryCounts.get(categoryKey(o)) ?? 0) + 1));
+
+  // A drag reorders officers inside their category only: they trade that category's المسلسل numbers,
+  // so no other officer's number changes. The category itself is set in بيانات الضباط.
   const handleOfficerDrop = async (dropIndex: number) => {
     const from = officerDragIndex;
     setOfficerDragIndex(null);
     if (from === null || from === dropIndex) return;
+    const moved = sessionOfficers[from];
+    const group = categoryKey(moved);
+    if (categoryKey(sessionOfficers[dropIndex]) !== group) {
+      setSessionNotice('السحب داخل نفس الترتيب فقط — يتغير ترتيب الضابط من تبويب «بيانات الضباط»');
+      return;
+    }
     const reordered = [...sessionOfficers];
-    const [moved] = reordered.splice(from, 1);
+    reordered.splice(from, 1);
     reordered.splice(dropIndex, 0, moved);
-    const withSerials = reordered.map((o, i) => ({ ...o, serial: i + 1 }));
-    setSessionOfficers(withSerials);
+    const slots = reordered.filter(o => categoryKey(o) === group).map(o => o.serial).sort((a, b) => a - b);
+    let next = 0;
+    const renumbered = reordered.map(o => (categoryKey(o) === group ? { ...o, serial: slots[next++] } : o));
+    setSessionOfficers(renumbered);
     setSessionNotice('');
     try {
       await reorderOfficers(
         committeeId,
-        withSerials.map(o => ({ officer_id: o.officer_id, ta3n_type: o.ta3n_type ?? null }))
+        [...renumbered]
+          .sort((a, b) => a.serial - b.serial)
+          .map(o => ({ officer_id: o.officer_id, ta3n_type: o.ta3n_type ?? null }))
       );
     } catch {
       setSessionNotice('فشل تحديث الترتيب');
@@ -571,7 +621,7 @@ export default function CommitteeDetail() {
   useLiveUpdates(() => {
     fetchData();
     if (activeTab === 'officers') {
-      if (isEdarya) fetchJudicialOfficers(); else fetchOfficers();
+      if (isEdarya) fetchJudicialOfficers(); else fetchOfficers(true);
     } else if (activeTab === 'session') {
       fetchSessionOfficers();
       fetchSessionStatus();
@@ -879,8 +929,34 @@ export default function CommitteeDetail() {
 
       {activeTab === 'officers' && !isEdarya && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">مجموع الضباط: {toArabicDigits(officers.length)}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            {officers.length > 0 && (
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <span className="font-medium">لشغل وظيفة</span>
+                <select
+                  value={activeJobFilter}
+                  onChange={e => setJobFilter(e.target.value)}
+                  className="input-field w-auto min-w-[16rem] py-1.5 text-sm"
+                >
+                  <option value={ALL_JOBS}>الكل ({toArabicDigits(officers.length)})</option>
+                  {jobOptions.map(job => (
+                    <option key={job} value={job}>
+                      {toArabicDigits(job)} ({toArabicDigits(jobCounts.get(job) ?? 0)})
+                    </option>
+                  ))}
+                  {hasNoJob && (
+                    <option value={NO_JOB}>غير محدد ({toArabicDigits(jobCounts.get('') ?? 0)})</option>
+                  )}
+                </select>
+              </label>
+            )}
+            <p className="text-sm text-gray-500">{officersCountLabel}</p>
+            {categories.length === 0 && (
+              <p className="w-full text-sm text-gray-500">
+                لا توجد قيم في ترتيب اللجنة بعد — أضفها من صفحة{' '}
+                <Link to="/admin/categories" className="font-medium text-blue-700 hover:underline">ترتيب اللجنة</Link>.
+              </p>
+            )}
           </div>
 
           {officers.length === 0 ? (
@@ -893,13 +969,14 @@ export default function CommitteeDetail() {
                     <th className="px-4 py-3 font-medium">م</th>
                     <th className="px-4 py-3 font-medium">الأقدمية</th>
                     <th className="px-4 py-3 font-medium">إسم الضابط</th>
+                    <th className="px-4 py-3 font-medium">ترتيب اللجنة</th>
                     <th className="px-4 py-3 font-medium">لشغل وظيفة</th>
                     <th className="px-4 py-3 font-medium">تاريخ المقابلة</th>
                     <th className="px-4 py-3 font-medium text-center">حذف</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {officers.map(o => (
+                  {shownOfficers.map(o => (
                     <tr key={o.officer_id} className="border-b border-gray-100 last:border-0">
                       <td className="px-4 py-3">{toArabicDigits(o.serial)}</td>
                       <td className="px-4 py-3">
@@ -909,10 +986,30 @@ export default function CommitteeDetail() {
                         {toArabicDigits([o.rank_name, o.officer_name].filter(Boolean).join(' / '))}
                       </td>
                       <td className="px-4 py-3">
+                        <select
+                          value={o.category_id ?? ''}
+                          onChange={e => handleOfficerField(o.officer_id, 'category_id', e.target.value === '' ? null : Number(e.target.value))}
+                          className="input-field py-1 text-sm min-w-[10rem]"
+                        >
+                          <option value="">— بدون —</option>
+                          {categories.map(c => (
+                            <option key={c.id} value={c.id}>{toArabicDigits(c.name)}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
                         <input
-                          value={o.target_job || ''}
-                          onChange={e => setOfficers(prev => prev.map(x => (x.officer_id === o.officer_id ? { ...x, target_job: e.target.value } : x)))}
-                          onBlur={e => handleOfficerField(o.officer_id, 'target_job', e.target.value)}
+                          value={jobDrafts[o.officer_id] ?? o.target_job ?? ''}
+                          onChange={e => setJobDrafts(d => ({ ...d, [o.officer_id]: e.target.value }))}
+                          onBlur={e => {
+                            const value = e.target.value;
+                            setJobDrafts(d => {
+                              const next = { ...d };
+                              delete next[o.officer_id];
+                              return next;
+                            });
+                            handleOfficerField(o.officer_id, 'target_job', value);
+                          }}
                           className="input-field py-1 text-sm min-w-[12rem]"
                           placeholder="مثال: ملحق دفاع سول"
                         />
@@ -944,8 +1041,8 @@ export default function CommitteeDetail() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200 text-gray-600">
-                    <td className="px-4 py-3 font-medium" colSpan={6}>
-                      مجموع الضباط: {toArabicDigits(officers.length)}
+                    <td className="px-4 py-3 font-medium" colSpan={7}>
+                      {officersCountLabel}
                     </td>
                   </tr>
                 </tfoot>
@@ -1063,70 +1160,83 @@ export default function CommitteeDetail() {
                 </thead>
                 <tbody>
                   {sessionOfficers.map((o, i) => (
-                    <tr
-                      key={o.officer_id}
-                      id={`session-officer-${o.officer_id}`}
-                      draggable
-                      onDragStart={() => setOfficerDragIndex(i)}
-                      onDragOver={e => e.preventDefault()}
-                      onDrop={() => handleOfficerDrop(i)}
-                      className={`border-b border-gray-100 last:border-0 cursor-move ${
-                        officerDragIndex === i ? 'opacity-40' : ''
-                      } ${highlightedOfficer === o.officer_id ? 'bg-yellow-50' : ''}`}
-                    >
-                      <td className="px-2 py-2 text-gray-300" title="اسحب لإعادة الترتيب">
-                        <DragHandle />
-                      </td>
-                      <td className="px-3 py-2">{toArabicDigits(o.serial)}</td>
-                      <td className="px-3 py-2">
-                        {[toArabicDigits(o.akdam_no), toArabicDigits(o.akdam_rep || '')].filter(Boolean).join(' ') || '-'}
-                      </td>
-                      <td className="px-3 py-2">
-                        {toArabicDigits([o.rank_name, o.officer_name].filter(Boolean).join(' / '))}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="radio"
-                          name="active-officer"
-                          checked={o.is_active === 1}
-                          onChange={() => handleSetActive(o.officer_id)}
-                          className="w-4 h-4"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={o.attendance === 0}
-                          onChange={e => handleFlagToggle(o.officer_id, 'attendance', !e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={o.apology === 1}
-                          onChange={e => handleFlagToggle(o.officer_id, 'apology', e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={o.done === 1}
-                          onChange={e => handleFlagToggle(o.officer_id, 'done', e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={o.hidden === 1}
-                          onChange={e => handleFlagToggle(o.officer_id, 'hidden', e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-center">{renderTally(o.officer_id)}</td>
-                    </tr>
+                    <Fragment key={o.officer_id}>
+                      {showCategoryGroups && (i === 0 || categoryKey(sessionOfficers[i - 1]) !== categoryKey(o)) && (
+                        <tr className="border-b border-indigo-100 bg-indigo-50">
+                          <td colSpan={10} className="px-3 py-2">
+                            <span className="font-bold text-indigo-900">
+                              {o.category_name ? toArabicDigits(o.category_name) : 'بدون ترتيب'}
+                            </span>
+                            <span className="ms-2 text-xs text-indigo-700">
+                              ({toArabicDigits(categoryCounts.get(categoryKey(o)) ?? 0)} ضابط)
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                      <tr
+                        id={`session-officer-${o.officer_id}`}
+                        draggable
+                        onDragStart={() => setOfficerDragIndex(i)}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={() => handleOfficerDrop(i)}
+                        className={`border-b border-gray-100 last:border-0 cursor-move ${
+                          officerDragIndex === i ? 'opacity-40' : ''
+                        } ${highlightedOfficer === o.officer_id ? 'bg-yellow-50' : ''}`}
+                      >
+                        <td className="px-2 py-2 text-gray-300" title="اسحب لإعادة الترتيب">
+                          <DragHandle />
+                        </td>
+                        <td className="px-3 py-2">{toArabicDigits(o.serial)}</td>
+                        <td className="px-3 py-2">
+                          {[toArabicDigits(o.akdam_no), toArabicDigits(o.akdam_rep || '')].filter(Boolean).join(' ') || '-'}
+                        </td>
+                        <td className="px-3 py-2">
+                          {toArabicDigits([o.rank_name, o.officer_name].filter(Boolean).join(' / '))}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="radio"
+                            name="active-officer"
+                            checked={o.is_active === 1}
+                            onChange={() => handleSetActive(o.officer_id)}
+                            className="w-4 h-4"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={o.attendance === 0}
+                            onChange={e => handleFlagToggle(o.officer_id, 'attendance', !e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={o.apology === 1}
+                            onChange={e => handleFlagToggle(o.officer_id, 'apology', e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={o.done === 1}
+                            onChange={e => handleFlagToggle(o.officer_id, 'done', e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={o.hidden === 1}
+                            onChange={e => handleFlagToggle(o.officer_id, 'hidden', e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">{renderTally(o.officer_id)}</td>
+                      </tr>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -1149,10 +1259,10 @@ export default function CommitteeDetail() {
           */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl">
             <button
-              onClick={() => window.open(`/print/committee/${committeeId}/decisions-card`, '_blank')}
+              onClick={() => window.open(`/print/committee/${committeeId}/member-scores-card`, '_blank')}
               className="btn-primary text-sm text-right"
             >
-              ملخص تصويت الأعضاء لكل ضابط
+              بطاقة تقييم أعضاء اللجنة
             </button>
             {/* Reports temporarily hidden (restore when needed):
             <button

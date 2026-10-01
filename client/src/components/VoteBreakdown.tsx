@@ -2,8 +2,8 @@ import { toArabicDigits } from '../utils/format';
 import { TAGDDED_CHOICES } from './member/voteOptions';
 import { TONE_TEXT, toneOf } from '../constants/voteTone';
 
-// Inline per-option vote counts, keyed by the officer's ta3n_type for edarya (mirrors the
-// member VoteTallyBox). counts is keyed by user_opinion value (string), from getVotingStatus.
+// Inline per-option vote counts (تصدق / لا يتصدق). counts is keyed by user_opinion value
+// (string), from getVotingStatus.
 export default function VoteBreakdown({ counts, className }: {
   committeeType?: string;
   ta3nType?: number | null;

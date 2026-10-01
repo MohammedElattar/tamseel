@@ -1,5 +1,5 @@
 import { getDB } from '../db/connection.js';
-import { finalDecision } from '../config/decision.js';
+import { tamseelDecision } from '../config/decision.js';
 
 function mapRows(results: any[]): Record<string, any>[] {
   if (!results.length || !results[0].values.length) return [];
@@ -40,10 +40,7 @@ export function detectDisputes(committeeId: number): DisputeInfo[] {
     rank_name: (o.rank_name as string) ?? null,
     l_lagna_type_c: o.l_lagna_type_c != null ? Number(o.l_lagna_type_c) : null,
     final_eval: (o.final_eval as string) ?? null,
-    decision: finalDecision(
-      o.final_eval != null ? Number(o.final_eval) : null,
-      o.l_lagna_type_c != null ? Number(o.l_lagna_type_c) : null
-    ),
+    decision: tamseelDecision(o.final_eval as string | null),
     done: (o.done as number) ?? 0,
   }));
 }

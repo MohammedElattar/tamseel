@@ -142,9 +142,11 @@ export default function DecisionReview() {
           النسخ الاحتياطية
         </button>
         */}
+        {/* Legacy chain-level card, replaced by بطاقة تقييم الأعضاء (restore when needed):
         <Link to={`/print/committee/${id}/decisions-card`} target="_blank" className="btn-secondary text-sm">
           ملخص تصويت الأعضاء لكل ضابط
         </Link>
+        */}
         <Link to={`/print/committee/${id}/member-scores-card`} target="_blank" className="btn-secondary text-sm">
           بطاقة تقييم الأعضاء
         </Link>
@@ -230,10 +232,8 @@ function TagddedTable({ officers, isCompleted, busy, onToggleDispute, onReverse 
           <tr className="border-b text-gray-500">
             <th className="p-2">م</th>
             <th className="p-2">الرتبة / الاسم</th>
-            <th className="p-2">نوع الترقية</th>
-            <th className="p-2">يستمر</th>
-            <th className="p-2">يحال</th>
-            <th className="p-2">يؤجل</th>
+            <th className="p-2">تصدق</th>
+            <th className="p-2">لا يتصدق</th>
             <th className="p-2">القرار</th>
             <th className="p-2">الحالة</th>
           </tr>
@@ -243,10 +243,8 @@ function TagddedTable({ officers, isCompleted, busy, onToggleDispute, onReverse 
             <tr key={o.officer_id} className={`border-b ${o.dispute === 1 ? 'bg-red-50' : ''}`}>
               <td className="p-2">{toArabicDigits(o.serial)}</td>
               <td className="p-2 font-medium">{toArabicDigits(o.rank_name)} / {toArabicDigits(o.officer_name)}</td>
-              <td className="p-2">{toArabicDigits(o.taraky_n) || '-'}</td>
               <td className="p-2 text-green-700">{toArabicDigits(o.accept ?? 0)}</td>
               <td className="p-2 text-red-700">{toArabicDigits(o.reject ?? 0)}</td>
-              <td className="p-2 text-amber-700">{toArabicDigits(o.postpone ?? 0)}</td>
               <td className="p-2 font-semibold">{toArabicDigits(o.decision) || '-'}</td>
               <td className="p-2">
                 <span className={`px-2 py-0.5 rounded text-xs ${o.done === 1 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>

@@ -137,7 +137,7 @@ export async function seedLookups(): Promise<void> {
   const catCount = db.exec('SELECT COUNT(*) FROM eval_lagna_cat');
   if ((catCount[0]?.values[0]?.[0] as number) === 0) {
     const categories = [
-      [1, 'تجديد وترقي'],
+      [1, 'لجنة التمثيل العسكري'],
     ];
     for (const [code, name] of categories) {
       db.run('INSERT INTO eval_lagna_cat (cat_c, cat_n) VALUES (?, ?)', [code, name]);
@@ -145,10 +145,10 @@ export async function seedLookups(): Promise<void> {
     console.log('Seeded eval_lagna_cat');
   }
 
-  // Tagdded (تجديد وترقي) committees use a single نوع اللجنة option; reconcile any
-  // legacy multi-category seed rows down to the one option.
-  db.run("INSERT OR IGNORE INTO eval_lagna_cat (cat_c, cat_n) VALUES (1, 'تجديد وترقي')");
-  db.run("UPDATE eval_lagna_cat SET cat_n = 'تجديد وترقي' WHERE cat_c = 1");
+  // Every committee is لجنة التمثيل العسكري, the single نوع اللجنة option; reconcile any
+  // legacy seed rows (e.g. the old تجديد وترقي name) down to it on every start.
+  db.run("INSERT OR IGNORE INTO eval_lagna_cat (cat_c, cat_n) VALUES (1, 'لجنة التمثيل العسكري')");
+  db.run("UPDATE eval_lagna_cat SET cat_n = 'لجنة التمثيل العسكري' WHERE cat_c = 1");
   db.run('DELETE FROM eval_lagna_cat WHERE cat_c <> 1');
 
   const lagnaTypeCount = db.exec('SELECT COUNT(*) FROM l_lagna_type');

@@ -13,15 +13,14 @@ export interface VoteLayout {
   columns?: 1 | 2 | 3;
 }
 
-// Every tagdded committee (رئيسية / تمهيدية / القائد) votes the same opinion set —
-// يستمر / يحال / يؤجل, with no numeric grade.
+// The commander's decision on an officer (لجنة التمثيل العسكري): تصدق / لا يتصدق. Members score
+// instead of voting, so these are the only opinions cast.
 export const TAGDDED_CHOICES: VoteChoice[] = [
-  { label: 'يستمر', tone: 'green', opinion: 1 },
-  { label: 'يحال', tone: 'red', opinion: 0 },
-  { label: 'يؤجل', tone: 'amber', opinion: -1 },
+  { label: 'تصدق', tone: 'green', opinion: 1 },
+  { label: 'لا يتصدق', tone: 'red', opinion: 0 },
 ];
 
-// The committee has a single type with a fixed vote set (يستمر / يحال / يؤجل).
+// The committee has a single type with a fixed vote set (تصدق / لا يتصدق).
 export function useVoteLayout(_committee?: any, _officer?: any): VoteLayout {
   return { choices: TAGDDED_CHOICES };
 }

@@ -8,13 +8,10 @@ import { toArabicDigits, toWesternDigits } from '../../utils/format';
 const fmt = (v: any) =>
   v == null ? '—' : toArabicDigits(Number.isInteger(Number(v)) ? String(v) : Number(v).toFixed(1));
 
-const tawsyaLabel = (v: any) =>
-  Number(v) === 0 ? 'يوصى بالإحالة' : Number(v) === 1 ? 'لا يوصى بالإحالة' : '—';
-
 // موقف/مراجعة تقييم أعضاء اللجنة: matrix of every included member's بند scores for one officer, with
 // the computed بنود (مسير الخدمة % + لغة إنجليزية) shown once, each member's total/نسبة and averages.
 // Read-only (موقف) by default; «تعديل» switches to مراجعة where the admin overrides members' manual
-// scores and sets the officer's final evaluation + توصية. Live refresh pauses while editing.
+// scores and sets the officer's final evaluation (تصدق / لا يتصدق). Live refresh pauses while editing.
 export default function MemberScoresMatrix() {
   const { id } = useParams<{ id: string }>();
   const committeeId = Number(id);
@@ -31,8 +28,7 @@ export default function MemberScoresMatrix() {
   // Edit (مراجعة) state.
   const [editMode, setEditMode] = useState(false);
   const [editScores, setEditScores] = useState<Record<string, string>>({}); // `${user_id}:${item_id}` -> string
-  const [editFinal, setEditFinal] = useState('');   // '', '1', '2', '-1'
-  const [editTawsya, setEditTawsya] = useState('');  // '', '0', '1'
+  const [editFinal, setEditFinal] = useState('');   // '', '1' (تصدق), '2' (لا يتصدق)
   const [saving, setSaving] = useState(false);
   const editingRef = useRef(false);
   useEffect(() => { editingRef.current = editMode; }, [editMode]);
@@ -97,7 +93,6 @@ export default function MemberScoresMatrix() {
     }
     setEditScores(init);
     setEditFinal(off?.final_eval != null && off.final_eval !== '' ? String(Number(off.final_eval)) : '');
-    setEditTawsya(off?.kaed_tawsya != null ? String(Number(off.kaed_tawsya)) : '');
     setMsg('');
     setEditMode(true);
   };
@@ -133,7 +128,6 @@ export default function MemberScoresMatrix() {
       await saveOfficerReview(committeeId, selectedId, {
         scores,
         final_eval: editFinal === '' ? null : Number(editFinal),
-        kaed_tawsya: editTawsya === '' ? null : Number(editTawsya),
       });
       setEditMode(false);
       setMsg('تم حفظ المراجعة');
@@ -216,13 +210,6 @@ export default function MemberScoresMatrix() {
                       <option value="">— بدون —</option>
                       <option value="1">تصدق</option>
                       <option value="2">لا يتصدق</option>
-                      <option value="-1">يؤجل</option>
-                    </select>
-                    <label className="text-gray-500">التوصية</label>
-                    <select value={editTawsya} onChange={(e) => setEditTawsya(e.target.value)} className="input-field py-1 w-40">
-                      <option value="">— بدون —</option>
-                      <option value="0">يوصى بالإحالة</option>
-                      <option value="1">لا يوصى بالإحالة</option>
                     </select>
                     <button onClick={save} disabled={saving} className="btn-primary text-sm disabled:opacity-50">
                       {saving ? 'جارٍ الحفظ...' : 'حفظ'}
@@ -234,10 +221,6 @@ export default function MemberScoresMatrix() {
                     <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5">
                       <span className="text-gray-500">التقييم النهائي: </span>
                       <b className="text-blue-800">{off.decision || '—'}</b>
-                    </div>
-                    <div className="rounded-lg border border-gray-200 px-3 py-1.5">
-                      <span className="text-gray-500">التوصية: </span>
-                      <b>{tawsyaLabel(off.kaed_tawsya)}</b>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-xs ${off.done === 1 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
                       {off.done === 1 ? 'مغلق' : 'مفتوح'}

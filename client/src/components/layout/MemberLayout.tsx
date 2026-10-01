@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { MemberCommitteeContext, MemberCommitteeInfo, MemberViewer } from '../../context/memberCommittee';
 import { toArabicDigits } from '../../utils/format';
 import KashidaLine from '../KashidaLine';
+import LogoutButton from './LogoutButton';
 
 // The nav link names the running committee: لجنة التمثيل العسكري + its training year (from the
 // committee's training_year). Falls back to a generic label until the dashboard reports which
@@ -88,12 +89,7 @@ export default function MemberLayout() {
             </div>
           )}
           <div className="flex flex-1 items-center justify-end">
-            <button
-              onClick={handleLogout}
-              className="min-h-[44px] rounded-lg border-2 border-green-300 px-4 py-1 text-base font-bold text-green-50 transition-colors hover:bg-green-800"
-            >
-              تسجيل الخروج
-            </button>
+            <LogoutButton onClick={handleLogout} />
           </div>
         </div>
       </header>

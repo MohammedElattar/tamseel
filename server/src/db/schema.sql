@@ -502,7 +502,8 @@ CREATE TABLE IF NOT EXISTS officer_photos (
   officer_id INTEGER PRIMARY KEY,
   personal BLOB,
   family BLOB,
-  updated_at TEXT
+  updated_at TEXT,
+  couple BLOB
 );
 
 -- Officer's children (الأبناء والبنات): system-managed detail entered by the admin, kept
@@ -608,7 +609,28 @@ CREATE TABLE IF NOT EXISTS committee_officers (
   -- manual استيفاء (fulfillment): 1 = مستوف, 0 = غير مستوف, NULL = غير محدد
   estifa INTEGER,
   estifa_auto INTEGER,
+  -- ترتيب اللجنة: the officer's category (officer_categories.id); NULL = none.
+  category_id INTEGER,
   UNIQUE(committee_id, officer_id, ta3n_type)
+);
+
+-- ترتيب اللجنة: the global list of officer categories (e.g. ملحق عسكري), managed on its own admin
+-- page. A value stays deletable only while no unfinished committee uses it (enforced in code).
+-- position is the order every committee's session presents the categories in.
+CREATE TABLE IF NOT EXISTS officer_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Categories whose intro screen the commander has already dismissed (متابعة) in a committee's
+-- session. No foreign keys, so deleting a committee or category never trips on these rows; both
+-- deletes clean them up explicitly.
+CREATE TABLE IF NOT EXISTS committee_category_intros (
+  committee_id INTEGER NOT NULL,
+  category_id INTEGER NOT NULL,
+  PRIMARY KEY (committee_id, category_id)
 );
 
 CREATE TABLE IF NOT EXISTS committee_member_assignments (

@@ -1,10 +1,12 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toArabicDigits } from '../../utils/format';
+import LogoutButton from './LogoutButton';
 
 const navItems = [
   { to: '/admin', label: 'لوحة التحكم', end: true },
   { to: '/admin/committees', label: 'اللجان' },
+  { to: '/admin/categories', label: 'ترتيب اللجنة' },
   { to: '/admin/officers', label: 'الضباط' },
   { to: '/admin/members', label: 'الأعضاء' },
   { to: '/admin/scoring', label: 'قاعدة التقييم' },
@@ -28,9 +30,7 @@ export default function AdminLayout() {
             <h1 className="text-lg sm:text-xl font-bold">قيادة القوات البحرية - فرع شئون ضباط</h1>
             <div className="flex items-center gap-4 shrink-0">
               <span className="text-sm text-blue-200">{toArabicDigits(user?.display_name)}</span>
-              <button onClick={handleLogout} className="text-sm text-blue-300 hover:text-white whitespace-nowrap">
-                تسجيل الخروج
-              </button>
+              <LogoutButton onClick={handleLogout} compact />
             </div>
           </div>
           {/* Nav gets its own full-width row that wraps, so every tab stays visible instead of

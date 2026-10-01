@@ -3,6 +3,7 @@ import { getCurrent } from '../../api/evaluations';
 import { useMemberCommittee } from '../../context/memberCommittee';
 import { useLiveUpdates } from '../../hooks/useLiveUpdates';
 import MemberStateScreen from '../../components/member/MemberStateScreen';
+import CategoryIntroOverlay from '../../components/member/CategoryIntroOverlay';
 import DisplayOfficerCard from '../../components/member/DisplayOfficerCard';
 import PendingVoters from '../../components/member/PendingVoters';
 
@@ -63,7 +64,6 @@ export default function VotingDisplayScreen() {
       />
     );
   }
-
   return (
     // Two tracks: في انتظار التصويت pinned to the right (RTL → first grid child), the officer
     // identity + photo/facts filling the rest to the left.
@@ -75,6 +75,8 @@ export default function VotingDisplayScreen() {
       <div className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <DisplayOfficerCard committee={committee} officer={officer} />
       </div>
+
+      <CategoryIntroOverlay intro={data?.categoryIntro ?? null} />
     </div>
   );
 }

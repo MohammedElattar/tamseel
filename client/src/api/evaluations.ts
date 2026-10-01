@@ -43,14 +43,13 @@ export async function getOfficerMemberScores(committeeId: number, officerId: num
 }
 
 // Admin review (مراجعة تقييم أعضاء اللجنة): override members' manual بند scores and set the
-// officer's final evaluation (تصدق/لا يتصدق/يؤجل) + توصية القائد بالإحالة.
+// officer's final evaluation (تصدق / لا يتصدق).
 export async function saveOfficerReview(
   committeeId: number,
   officerId: number,
   payload: {
     scores: { user_id: number; item_id: number; score: number | null }[];
     final_eval?: number | null;
-    kaed_tawsya?: number | null;
   },
 ) {
   const { data } = await api.put(`/evaluations/committee/${committeeId}/officer/${officerId}/review`, payload);
@@ -79,6 +78,12 @@ export async function saveScores(
 // Commander/deputy only: advance the active officer next/prev.
 export async function advanceOfficer(direction: 'next' | 'prev') {
   const { data } = await api.post('/evaluations/advance', { direction });
+  return data;
+}
+
+// متابعة on the category intro screen (commander/deputy).
+export async function continueCategoryIntro() {
+  const { data } = await api.post('/evaluations/category-intro/continue');
   return data;
 }
 

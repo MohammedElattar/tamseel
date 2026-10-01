@@ -12,6 +12,7 @@ import OfficerEdit from './pages/admin/OfficerEdit';
 import OfficersRequirements from './pages/admin/OfficersRequirements';
 import DataImport from './pages/admin/DataImport';
 import ScoringBasis from './pages/admin/ScoringBasis';
+import CommitteeCategories from './pages/admin/CommitteeCategories';
 import ServiceScoreEntry from './pages/admin/ServiceScoreEntry';
 import LiveVotingMonitor from './pages/admin/LiveVotingMonitor';
 import MemberScoresMatrix from './pages/admin/MemberScoresMatrix';
@@ -56,6 +57,7 @@ function AppRoutes() {
         <Route path="requirements" element={<OfficersRequirements />} />
         <Route path="import" element={<DataImport />} />
         <Route path="scoring" element={<ScoringBasis />} />
+        <Route path="categories" element={<CommitteeCategories />} />
         <Route path="officers/:id" element={<OfficerDetail />} />
         <Route path="officers/:id/edit" element={<OfficerEdit />} />
         <Route path="officers/:id/service-score" element={<ServiceScoreEntry />} />
