@@ -237,7 +237,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
 const OFFICER_EDIT_COLS = [
   'per_name', 'full_rank', 'akdam_no', 'akdam_rep', 'person_id', 'unt_n', 'job_n',
   'speciality', 'taraky_tagdeed', 'in_service', 'weight', 'height', 'fark_wazn',
-  'marital_status', 'wife_status', 'boy_no', 'girl_no', 'faculty', 'mil_qualification',
+  'marital_status', 'wife_status', 'boy_no', 'girl_no', 'moh_n', 'faculty', 'mil_qualification',
   'civil_qualification', 'off_notice', 'taraky_estifa', 'estifa_job', 'entedab',
   'se7a', 'kafaa_takreer', 'mohakma_geza', 'kyada', 'ragba', 'ra8ba_twsia',
 ];

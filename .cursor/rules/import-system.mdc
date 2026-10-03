@@ -39,7 +39,8 @@ Note: Oracle `JOBS` here is the career history, distinct from `MRTB` → `jobs` 
 ## الضباط (officers)
 
 `ELASASY` is now a **denormalized, pre-computed** dump (one row per officer, a single `NASHRA_DATE`) stored verbatim on `officers` with **no code joins**:
-- Identity/personal: `PER_NAME, AKDAM_NO, AKDAM_REP, AKDAMEYA, MILITARY_NUMBER (→ person_id), HEIGHT, WEIGHT, FARK_WAZN, FACULTY, MARITAL_STATUS (text), WIFE_STATUS, BOY_NO, GIRL_NO`. The التمثيل العسكري dump sends الحالة الاجتماعية as `MARIT_N` (the `marit` lookup text), renamed to `marital_status` in `COLUMN_MAP`.
+- Identity/personal: `PER_NAME, AKDAM_NO, AKDAM_REP, AKDAMEYA, MILITARY_NUMBER (→ person_id), HEIGHT, WEIGHT, FARK_WAZN, FACULTY, MARITAL_STATUS (text), WIFE_STATUS, BOY_NO, GIRL_NO, MOH_N (→ moh_n, محل الإقامة — the governorate name)`. The التمثيل العسكري dump sends الحالة الاجتماعية as `MARIT_N` (the `marit` lookup text), renamed to `marital_status` in `COLUMN_MAP`.
+- The dump may carry `SPEB_N` next to `SPECIALITY` (same value); both resolve to `speciality` and the importer keeps the first, so a target column is never inserted twice.
 - Text where codes used to be: `FULL_RANK, UNT_N, JOB_N, SPECIALITY` (replace the rank/unit/job/spec code joins).
 - Pre-computed results: `TARAKY_C, TARAKY_TAGDEED` (promotion), `TARAKY_ESTIFA, ESTIFA_JOB` (استيفاء), `MIL_QUALIFICATION, CIVIL_QUALIFICATION, TAWSYA_KA2ED, ENTEDAB`.
 

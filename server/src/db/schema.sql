@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS officers (
   -- توصية القائد المباشر (RA8BA_TWSIA): imported verbatim; shown as-is on the voting card and
   -- dropped entirely when the officer has no value.
   ra8ba_twsia TEXT,
+  -- محل الإقامة (MOH_N, the governorate name): imported verbatim, shown on the voting card.
+  moh_n TEXT,
   -- Row sequence in the ELASASY dump. The Navy exports officers already sorted (including a
   -- kin_c group the app never imports), so we preserve that file order here and sort every
   -- officer listing by it instead of re-deriving a sort we can't reproduce.

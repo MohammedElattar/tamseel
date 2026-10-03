@@ -379,13 +379,18 @@ router.get('/current', (req: AuthRequest, res: Response) => {
   ));
   if (activeOfficer) {
     const tq = mapRows(db.exec(
-      `SELECT mil_qualification, civil_qualification, marital_status, fark_wazn, weight, height
+      `SELECT mil_qualification, civil_qualification, marital_status, fark_wazn, weight, height,
+              boy_no, girl_no, speciality, moh_n
        FROM officers WHERE id = ?`,
       [activeOfficer.officer_id]
     ))[0] ?? {};
     activeOfficer.highest_tahil_mil = tq.mil_qualification ?? null;
     activeOfficer.highest_tahil_civil = tq.civil_qualification ?? null;
     activeOfficer.marital_status = tq.marital_status ?? null;
+    activeOfficer.boy_no = tq.boy_no ?? null;
+    activeOfficer.girl_no = tq.girl_no ?? null;
+    activeOfficer.speciality = tq.speciality ?? null;
+    activeOfficer.moh_n = tq.moh_n ?? null;
     activeOfficer.weight = tq.weight ?? null;
     activeOfficer.height = tq.height ?? null;
     activeOfficer.tanasok = tq.fark_wazn ?? (tq.weight != null && tq.height != null ? tq.weight + 100 - tq.height : null);
@@ -540,7 +545,7 @@ router.get('/officer-cv/:officerId', (req: AuthRequest, res: Response) => {
   ))[0] ?? null;
 
   const basic = mapRows(db.exec(
-    `SELECT weight, height, fark_wazn, marital_status, wife_status, boy_no, girl_no,
+    `SELECT weight, height, fark_wazn, marital_status, wife_status, boy_no, girl_no, moh_n,
             mil_qualification as main_qualify_spec, civil_qualification as civil_qualify,
             in_service, faculty, off_notice, taraky_estifa, estifa_job, entedab
      FROM officers WHERE id = ?`,

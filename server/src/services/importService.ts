@@ -64,11 +64,13 @@ const COLUMN_MAP: Record<string, Record<string, string>> = {
   // person_id (the officer's military number); every other column auto-maps by lowercase.
   officers: {
     MILITARY_NUMBER: 'person_id',
-    // التمثيل العسكري ELASASY dump: text speciality, training year, and the arm code.
+    // التمثيل العسكري ELASASY dump: text speciality, training year, and the arm code. The dump may
+    // send SPEB_N alongside SPECIALITY (the same value); the first of the two is kept.
     SPEB_N: 'speciality',
     TRANING_YEAR: 'training_year',
     ARM_C: 'arm_code',
-    // الحالة الاجتماعية arrives as the MARIT lookup's text. HEIGHT / WEIGHT auto-map.
+    // الحالة الاجتماعية arrives as the MARIT lookup's text. HEIGHT / WEIGHT / BOY_NO / GIRL_NO and
+    // MOH_N (محل الإقامة) auto-map.
     MARIT_N: 'marital_status',
   },
   // الوظائف السابقة: المرتب is one column that arrives under either name (RAN_N_1 or
@@ -374,8 +376,8 @@ export function parseAndImport(sqlContent: string, mode: ImportMode = 'replace')
       const targetCols: string[] = [];
       g.columns.forEach((oc, i) => {
         const resolved = resolveColumn(g.target, oc, cols);
-        if (resolved) { keep.push(i); targetCols.push(resolved); }
-        else (skipped[g.target] ||= new Set()).add(oc);
+        if (!resolved) (skipped[g.target] ||= new Set()).add(oc);
+        else if (!targetCols.includes(resolved)) { keep.push(i); targetCols.push(resolved); }
       });
       // Skip a block with no real column match (only the officer key) so a mislabeled
       // dump can neither wipe nor pollute an unrelated table.

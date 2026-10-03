@@ -133,6 +133,8 @@ function runMigrations(database: Database): void {
     // توصية القائد المباشر (RA8BA_TWSIA): imported verbatim, shown as-is on the voting card and
     // dropped entirely when the officer has no value (replaces the tawsya_ka2ed display source).
     'ALTER TABLE officers ADD COLUMN ra8ba_twsia TEXT',
+    // محل الإقامة (MOH_N, the governorate name), imported verbatim.
+    'ALTER TABLE officers ADD COLUMN moh_n TEXT',
     // تقارير الكفاءة (SECURITYS) now stored verbatim: KAED/MOSDAK ratings, MM-YYYY period,
     // and the التقدير text. from_date/to_date already exist; old rating columns stay vestigial.
     'ALTER TABLE officer_kafaa ADD COLUMN from_date_c TEXT',

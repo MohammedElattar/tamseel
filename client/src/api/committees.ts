@@ -66,6 +66,21 @@ export async function updateEvalItems(id: number, items: { id: number; name?: st
   return data;
 }
 
+export async function addEvalItem(id: number, item: { name: string; max_degree: number }) {
+  const { data } = await api.post(`/committees/${id}/eval-items`, item);
+  return data;
+}
+
+export async function deleteEvalItem(id: number, itemId: number) {
+  const { data } = await api.delete(`/committees/${id}/eval-items/${itemId}`);
+  return data;
+}
+
+export async function reorderEvalItems(id: number, order: number[]) {
+  const { data } = await api.patch(`/committees/${id}/eval-items/reorder`, { order });
+  return data;
+}
+
 export async function getCommitteeOfficers(
   id: number,
   filters: { kind?: number; lagna_type_code?: number } = {}

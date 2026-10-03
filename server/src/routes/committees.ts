@@ -10,6 +10,7 @@ import {
 import { backupCommittee, listBackups, restoreCommittee } from '../services/backupService.js';
 import { resolvePanelIdentities } from '../services/panelMembers.js';
 import { SESSION_ORDER_BY, resequenceByCategory } from '../services/sessionOrder.js';
+import { arabizeProseDigits } from '../config/arabicText.js';
 
 const DEFAULT_MEMBER_PASSWORD = 'member123';
 
@@ -485,15 +486,101 @@ router.post('/:id/load-officers', requireAdmin, (req: AuthRequest, res: Response
   res.json({ loaded: eligible.length, message: `تم تحميل ${eligible.length} ضابط` });
 });
 
+// بنود التقييم لهذه اللجنة. `scored` counts the members' recorded degrees on each بند: a scored بند
+// can't be deleted, and its maximum can't drop below the highest recorded degree. The computed بنود
+// (مسير الخدمة / لغة إنجليزية) are fixed — they can only be reordered.
+const EVAL_ITEMS_Q = `SELECT i.id, i.serial, i.name, i.max_degree, i.kind, i.source,
+    (SELECT COUNT(*) FROM member_item_scores s
+     WHERE s.committee_id = i.committee_id AND s.item_id = i.id AND s.score IS NOT NULL) AS scored
+  FROM committee_eval_items i WHERE i.committee_id = ? ORDER BY i.serial, i.id`;
+const listEvalItems = (db: any, committeeId: number) => mapRows(db.exec(EVAL_ITEMS_Q, [committeeId]));
+
+function evalItemNameTaken(db: any, committeeId: number, name: string, exceptId = -1): boolean {
+  const r = db.exec(
+    'SELECT 1 FROM committee_eval_items WHERE committee_id = ? AND TRIM(name) = ? AND id <> ?',
+    [committeeId, name, exceptId]
+  );
+  return !!(r.length && r[0].values.length);
+}
+
 // بنود التقييم لهذه اللجنة (تُنسخ من القالب تلقائياً إن كانت فارغة).
 router.get('/:id/eval-items', (req: AuthRequest, res: Response) => {
   const db = getDB();
   const committeeId = Number(req.params.id);
   if (!Number.isInteger(committeeId)) { res.status(400).json({ error: 'معرف اللجنة غير صحيح' }); return; }
-  const q = 'SELECT id, serial, name, max_degree, kind, source FROM committee_eval_items WHERE committee_id = ? ORDER BY serial, id';
-  let items = mapRows(db.exec(q, [committeeId]));
-  if (!items.length) { copyEvalTemplate(db, committeeId); saveDB(); items = mapRows(db.exec(q, [committeeId])); }
+  let items = listEvalItems(db, committeeId);
+  if (!items.length) { copyEvalTemplate(db, committeeId); saveDB(); items = listEvalItems(db, committeeId); }
   res.json(items);
+});
+
+// Add a manual بند at the end of the list. Body: { name, max_degree }.
+router.post('/:id/eval-items', requireAdmin, (req: AuthRequest, res: Response) => {
+  const db = getDB();
+  const committeeId = Number(req.params.id);
+  const name = String(req.body?.name ?? '').trim();
+  const max = Number(req.body?.max_degree);
+  if (!Number.isInteger(committeeId)) { res.status(400).json({ error: 'معرف اللجنة غير صحيح' }); return; }
+  if (!name) { res.status(400).json({ error: 'اسم البند مطلوب' }); return; }
+  if (!Number.isFinite(max) || max <= 0) { res.status(400).json({ error: 'الحد الأقصى يجب أن يكون رقماً أكبر من صفر' }); return; }
+  const committee = db.exec('SELECT 1 FROM committees WHERE id = ?', [committeeId]);
+  if (!(committee.length && committee[0].values.length)) { res.status(404).json({ error: 'اللجنة غير موجودة' }); return; }
+  if (evalItemNameTaken(db, committeeId, name)) { res.status(409).json({ error: `يوجد بند بنفس الاسم «${name}»` }); return; }
+  const next = Number(db.exec(
+    'SELECT COALESCE(MAX(serial), 0) + 1 FROM committee_eval_items WHERE committee_id = ?', [committeeId]
+  )[0].values[0][0]);
+  db.run(
+    `INSERT INTO committee_eval_items (committee_id, serial, name, max_degree, kind, source)
+     VALUES (?, ?, ?, ?, 'manual', NULL)`,
+    [committeeId, next, name, max]
+  );
+  saveDB();
+  res.json(listEvalItems(db, committeeId));
+});
+
+// Reorder: `order` is every بند id of the committee in its new display order -> serial = index+1,
+// the order members see the بنود in. A list that doesn't match the committee's بنود is refused.
+router.patch('/:id/eval-items/reorder', requireAdmin, (req: AuthRequest, res: Response) => {
+  const db = getDB();
+  const committeeId = Number(req.params.id);
+  const order: number[] = Array.isArray(req.body?.order) ? req.body.order.map(Number) : [];
+  if (!Number.isInteger(committeeId)) { res.status(400).json({ error: 'معرف اللجنة غير صحيح' }); return; }
+  const ids = new Set(mapRows(db.exec(
+    'SELECT id FROM committee_eval_items WHERE committee_id = ?', [committeeId]
+  )).map((r: any) => Number(r.id)));
+  if (order.length !== ids.size || new Set(order).size !== order.length || order.some(id => !ids.has(id))) {
+    res.status(400).json({ error: 'الترتيب لا يطابق بنود اللجنة — أعد تحميل الصفحة' });
+    return;
+  }
+  order.forEach((id, i) => {
+    db.run('UPDATE committee_eval_items SET serial = ? WHERE id = ? AND committee_id = ?', [i + 1, id, committeeId]);
+  });
+  saveDB();
+  res.json(listEvalItems(db, committeeId));
+});
+
+// Delete a manual بند that no member has scored yet, then renumber the rest 1..n.
+router.delete('/:id/eval-items/:itemId', requireAdmin, (req: AuthRequest, res: Response) => {
+  const db = getDB();
+  const committeeId = Number(req.params.id);
+  const itemId = Number(req.params.itemId);
+  if (!Number.isInteger(committeeId) || !Number.isInteger(itemId)) { res.status(400).json({ error: 'بيانات غير صحيحة' }); return; }
+  const item = listEvalItems(db, committeeId).find((it: any) => it.id === itemId);
+  if (!item) { res.status(404).json({ error: 'البند غير موجود' }); return; }
+  if (item.kind === 'computed') { res.status(400).json({ error: `البند «${item.name}» ثابت ولا يمكن حذفه` }); return; }
+  if (item.scored > 0) {
+    res.status(409).json({ error: `لا يمكن حذف البند «${item.name}» لوجود درجات مسجلة عليه من الأعضاء` });
+    return;
+  }
+  // Only cleared (empty) score rows can still point at this بند; they go with it.
+  db.run('DELETE FROM member_item_scores WHERE committee_id = ? AND item_id = ?', [committeeId, itemId]);
+  db.run('DELETE FROM committee_eval_items WHERE id = ? AND committee_id = ?', [itemId, committeeId]);
+  mapRows(db.exec(
+    'SELECT id FROM committee_eval_items WHERE committee_id = ? ORDER BY serial, id', [committeeId]
+  )).forEach((r: any, i: number) => {
+    db.run('UPDATE committee_eval_items SET serial = ? WHERE id = ?', [i + 1, r.id]);
+  });
+  saveDB();
+  res.json(listEvalItems(db, committeeId));
 });
 
 // «تحميل البنود»: re-copy the default template into this committee (replace).
@@ -507,29 +594,46 @@ router.post('/:id/load-items', requireAdmin, (req: AuthRequest, res: Response) =
 });
 
 // Update this committee's بنود (name/max per item). Body: { items: [{ id, name?, max_degree }] }.
+// The computed بنود are skipped. Every row is checked before anything is written, so one bad row
+// leaves all the بنود untouched.
 router.put('/:id/eval-items', requireAdmin, (req: AuthRequest, res: Response) => {
   const db = getDB();
   const committeeId = Number(req.params.id);
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
   if (!Number.isInteger(committeeId) || !items.length) { res.status(400).json({ error: 'بيانات غير صحيحة' }); return; }
+  const updates: { id: number; name: string; max: number }[] = [];
   for (const it of items) {
     const iid = Number(it?.id);
     if (!Number.isInteger(iid)) continue;
-    const max = it?.max_degree === null || it?.max_degree === '' ? 0 : Number(it.max_degree);
-    const m = Number.isFinite(max) && max >= 0 ? max : 0;
-    if (it?.name != null) {
-      db.run('UPDATE committee_eval_items SET name = ?, max_degree = ? WHERE id = ? AND committee_id = ?',
-        [String(it.name), m, iid, committeeId]);
-    } else {
-      db.run('UPDATE committee_eval_items SET max_degree = ? WHERE id = ? AND committee_id = ?',
-        [m, iid, committeeId]);
+    const cur = mapRows(db.exec(
+      'SELECT name, kind FROM committee_eval_items WHERE id = ? AND committee_id = ?', [iid, committeeId]
+    ))[0];
+    if (!cur || cur.kind === 'computed') continue;
+    const name = it?.name == null ? String(cur.name) : String(it.name).trim();
+    const max = Number(it?.max_degree);
+    if (!name) { res.status(400).json({ error: 'اسم البند مطلوب' }); return; }
+    if (!Number.isFinite(max) || max <= 0) {
+      res.status(400).json({ error: `الحد الأقصى للبند «${name}» يجب أن يكون رقماً أكبر من صفر` });
+      return;
     }
+    if (evalItemNameTaken(db, committeeId, name, iid)) { res.status(409).json({ error: `يوجد بند بنفس الاسم «${name}»` }); return; }
+    const top = db.exec(
+      'SELECT MAX(score) FROM member_item_scores WHERE committee_id = ? AND item_id = ?', [committeeId, iid]
+    )[0]?.values[0][0];
+    if (top != null && max < Number(top)) {
+      res.status(400).json({
+        error: `لا يمكن أن يقل الحد الأقصى للبند «${name}» عن أعلى درجة مسجلة عليه (${arabizeProseDigits(String(top))})`,
+      });
+      return;
+    }
+    updates.push({ id: iid, name, max });
+  }
+  for (const u of updates) {
+    db.run('UPDATE committee_eval_items SET name = ?, max_degree = ? WHERE id = ? AND committee_id = ?',
+      [u.name, u.max, u.id, committeeId]);
   }
   saveDB();
-  res.json(mapRows(db.exec(
-    'SELECT id, serial, name, max_degree, kind, source FROM committee_eval_items WHERE committee_id = ? ORDER BY serial, id',
-    [committeeId]
-  )));
+  res.json(listEvalItems(db, committeeId));
 });
 
 // List committee officers with optional KIND and bulletin-rank filters.

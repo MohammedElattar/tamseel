@@ -29,6 +29,7 @@ const BASIC_FIELDS: FieldSpec[] = [
   { key: 'wife_status', label: 'حالة الزوجة', type: 'text' },
   { key: 'boy_no', label: 'عدد الأبناء', type: 'num' },
   { key: 'girl_no', label: 'عدد البنات', type: 'num' },
+  { key: 'moh_n', label: 'محل الإقامة', type: 'text' },
   { key: 'faculty', label: 'الكلية / المعهد', type: 'text' },
   { key: 'mil_qualification', label: 'أعلى تأهيل', type: 'text' },
   { key: 'civil_qualification', label: 'التأهيل المدني', type: 'text' },

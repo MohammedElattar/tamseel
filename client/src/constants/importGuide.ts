@@ -39,7 +39,7 @@ export const IMPORT_GUIDE: ImportTableGroup[] = [
         columns:
           'ID, PER_NAME, FULL_RANK, AKDAM_NO, AKDAM_REP, AKDAMEYA, UNT_N, JOB_N, SPECIALITY, ' +
           'TRANING_YEAR, ACTIV_NOTE, ARM_C, DOFA_NO, DATE_RANK, DATE_ENTER, DATE_TRANS, DATE_BIRTH, IS_DELETED, ' +
-          'HEIGHT, WEIGHT, MARIT_N',
+          'HEIGHT, WEIGHT, MARIT_N, BOY_NO, GIRL_NO, MOH_N',
         selectQuery: `select e.id                                          AS ID,
        e.PER_NAME                                    AS PER_NAME,
        r.RAN_N || ' ' || kf.KIN_N || ' ' || e.ARKAN  AS FULL_RANK,
@@ -60,14 +60,18 @@ export const IMPORT_GUIDE: ImportTableGroup[] = [
        0                                             AS IS_DELETED,
        e.HEIGHT                                      AS HEIGHT,
        e.WEIGHT                                      AS WEIGHT,
-       mr.MARIT_N                                    AS MARIT_N
-from   elasasy e, dobat_tbl dt, commander.per_tbl pt, units u, mrtb m, specb s, rank r, kindoff kf, marit mr
+       mr.MARIT_N                                    AS MARIT_N,
+       e.BOY_NO                                      AS BOY_NO,
+       e.GIRL_NO                                     AS GIRL_NO,
+       mo.MOH_N                                      AS MOH_N
+from   elasasy e, dobat_tbl dt, commander.per_tbl pt, units u, mrtb m, specb s, rank r, kindoff kf, marit mr, mohafza mo
 where  e.ID = pt.OFFICER_ID
   and  e.ARM_C = 1
   and  e.UNT_C = u.UNT_C
   and  e.JOB_C = m.JOB_C
   and  e.SPE_C = s.SPEB_C (+)
   and  e.MARIT_C = mr.MARIT_C (+)
+  and  e.MOH_C = mo.MOH_C (+)
   and  e.RAN_C = r.RAN_C
   and  e.KIN_C = kf.KIN_C
   and  pt.ASAASY = 'مرشح تمثيل عسكرى'
@@ -77,7 +81,7 @@ where  e.ID = pt.OFFICER_ID
         example: `Insert into OFF.ELASASY
    (ID, PER_NAME, FULL_RANK, AKDAM_NO, AKDAM_REP, AKDAMEYA, UNT_N, JOB_N, SPECIALITY,
     TRANING_YEAR, ACTIV_NOTE, ARM_C, DOFA_NO, DATE_RANK, DATE_ENTER, DATE_TRANS, DATE_BIRTH, IS_DELETED,
-    HEIGHT, WEIGHT, MARIT_N)
+    HEIGHT, WEIGHT, MARIT_N, BOY_NO, GIRL_NO, MOH_N)
  Values
    (9891, 'علي شرقاوي علي عبدالمنعم', 'عميد بحرى أ.ح', 1946, 'م3', '1946م3',
     'قيادة وحدات الدفاع الساحلي', 'قائد وحدات الدفاع الساحلى', 'مدفعية ساحلية',
@@ -86,7 +90,7 @@ where  e.ID = pt.OFFICER_ID
     TO_DATE('01/01/2000 00:00:00', 'MM/DD/YYYY HH24:MI:SS'),
     TO_DATE('01/01/2015 00:00:00', 'MM/DD/YYYY HH24:MI:SS'),
     TO_DATE('01/01/1975 00:00:00', 'MM/DD/YYYY HH24:MI:SS'), 0,
-    178, 80, 'متزوج');`,
+    178, 80, 'متزوج', 2, 1, 'القاهرة');`,
       },
     ],
   },

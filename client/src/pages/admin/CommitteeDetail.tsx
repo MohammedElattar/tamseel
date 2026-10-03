@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
+import type { FormEvent } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getCommittee, loadMembers, setMemberIncluded,
@@ -9,7 +10,7 @@ import {
   getJudicialOfficers, updateJudicialCase, reorderMembers, reorderOfficers,
   activateCommittee, deactivateCommittee, completeCommittee, deleteCommittee,
   createCommitteeMember, removeCommitteeMember,
-  getEvalItems, loadEvalItems, updateEvalItems,
+  getEvalItems, loadEvalItems, updateEvalItems, addEvalItem, deleteEvalItem, reorderEvalItems,
 } from '../../api/committees';
 import { getCategories } from '../../api/categories';
 import type { OfficerCategory } from '../../api/categories';
@@ -152,26 +153,65 @@ export default function CommitteeDetail() {
     if (activeTab === 'officers') fetchOfficers();
   }, [activeTab, fetchOfficers]);
 
-  // بنود التقييم لهذه اللجنة (تحديد بنود العرض).
+  // بنود التقييم لهذه اللجنة (تحديد بنود العرض). Every action saves right away and the server answers
+  // with the updated list. مسير الخدمة / لغة إنجليزية (computed) can only be reordered.
   const [evalItems, setEvalItems] = useState<any[]>([]);
-  const [itemsSaving, setItemsSaving] = useState(false);
+  const [itemsBusy, setItemsBusy] = useState(false);
   const [itemsMsg, setItemsMsg] = useState('');
+  const [itemsError, setItemsError] = useState('');
+  const [newItem, setNewItem] = useState({ name: '', max: '' });
+  const [itemEdit, setItemEdit] = useState<{ id: number; name: string; max: string } | null>(null);
+  const [itemDragIndex, setItemDragIndex] = useState<number | null>(null);
   const fetchEvalItems = useCallback(async () => {
     setEvalItems(await getEvalItems(committeeId));
   }, [committeeId]);
   useEffect(() => { if (activeTab === 'items') fetchEvalItems(); }, [activeTab, fetchEvalItems]);
 
-  const setItemField = (id: number, field: string, val: any) =>
-    setEvalItems(items => items.map(it => (it.id === id ? { ...it, [field]: val } : it)));
-  const saveEvalItems = async () => {
-    setItemsSaving(true); setItemsMsg('');
+  const runItems = async (action: () => Promise<any[]>, done: string) => {
+    setItemsBusy(true); setItemsError(''); setItemsMsg('');
     try {
-      const d = await updateEvalItems(
-        committeeId,
-        evalItems.map(it => ({ id: it.id, name: it.name, max_degree: Number(it.max_degree) || 0 }))
-      );
-      setEvalItems(d); setItemsMsg('تم حفظ البنود');
-    } catch { setItemsMsg('تعذر الحفظ'); } finally { setItemsSaving(false); }
+      setEvalItems(await action());
+      setItemsMsg(done);
+      return true;
+    } catch (e: any) {
+      setItemsError(e.response?.data?.error || 'تعذر تنفيذ العملية');
+      return false;
+    } finally {
+      setItemsBusy(false);
+    }
+  };
+  const addItem = async (e: FormEvent) => {
+    e.preventDefault();
+    const name = newItem.name.trim();
+    if (!name || !(Number(newItem.max) > 0)) return;
+    if (await runItems(() => addEvalItem(committeeId, { name, max_degree: Number(newItem.max) }), 'تمت إضافة البند')) {
+      setNewItem({ name: '', max: '' });
+    }
+  };
+  const saveItemEdit = async () => {
+    if (!itemEdit) return;
+    const name = itemEdit.name.trim();
+    if (!name || !(Number(itemEdit.max) > 0)) return;
+    const saved = await runItems(
+      () => updateEvalItems(committeeId, [{ id: itemEdit.id, name, max_degree: Number(itemEdit.max) }]),
+      'تم حفظ التعديل',
+    );
+    if (saved) setItemEdit(null);
+  };
+  const removeItem = async (it: any) => {
+    if (!window.confirm(`هل تريد حذف البند «${it.name}»؟`)) return;
+    await runItems(() => deleteEvalItem(committeeId, it.id), 'تم حذف البند');
+  };
+  // Moves a بند and saves the whole order right away; a failed save reloads the stored order.
+  const moveItem = async (from: number, to: number) => {
+    if (from === to || to < 0 || to >= evalItems.length) return;
+    const next = [...evalItems];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setEvalItems(next);
+    if (!(await runItems(() => reorderEvalItems(committeeId, next.map(it => it.id)), 'تم حفظ ترتيب البنود'))) {
+      fetchEvalItems();
+    }
   };
   const reloadItemsTemplate = async () => {
     if (!window.confirm('سيتم استبدال بنود هذه اللجنة بالقالب الافتراضي. متابعة؟')) return;
@@ -1053,58 +1093,159 @@ export default function CommitteeDetail() {
       )}
 
       {activeTab === 'items' && (
-        <div>
-          <div className="flex items-center justify-end mb-4 gap-2 flex-wrap">
-            <button onClick={reloadItemsTemplate} className="btn-secondary text-sm">تحميل البنود (من القالب)</button>
+        <div className="max-w-4xl">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <p className="max-w-2xl text-sm text-gray-500">
+              البنود التي يقيّم عليها الأعضاء، بترتيب ظهورها لهم. غيّر الترتيب بسحب الصف أو بالأسهم.
+              بندا «مسير الخدمة» و«لغة إنجليزية» محسوبان فلا يُعدَّلان ولا يُحذفان، ولا يُحذف بند سجّل عليه الأعضاء درجات.
+            </p>
+            <button onClick={reloadItemsTemplate} disabled={itemsBusy} className="btn-secondary text-sm">تحميل البنود (من القالب)</button>
           </div>
           {itemsMsg && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm mb-3">{itemsMsg}</div>}
-          <div className="card overflow-x-auto p-0 max-w-3xl">
+          {itemsError && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm mb-3">{itemsError}</div>}
+
+          <form onSubmit={addItem} className="card mb-4 flex flex-wrap items-end gap-3">
+            <div className="min-w-[16rem] flex-1">
+              <label htmlFor="new-eval-item" className="label">إضافة بند جديد</label>
+              <input
+                id="new-eval-item"
+                className="input-field"
+                value={newItem.name}
+                onChange={e => setNewItem(v => ({ ...v, name: e.target.value }))}
+                placeholder="مثال: الثقة بالنفس"
+              />
+            </div>
+            <div className="w-32">
+              <label htmlFor="new-eval-item-max" className="label">الحد الأقصى</label>
+              <input
+                id="new-eval-item-max"
+                className="input-field text-center"
+                inputMode="numeric"
+                value={toArabicDigits(newItem.max)}
+                onChange={e => setNewItem(v => ({ ...v, max: toWesternDigits(e.target.value).replace(/[^0-9.]/g, '') }))}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={itemsBusy || !newItem.name.trim() || !(Number(newItem.max) > 0)}
+              className="btn-primary disabled:opacity-50"
+            >
+              إضافة
+            </button>
+          </form>
+
+          <div className="card overflow-x-auto p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-gray-600 text-right">
-                  <th className="px-4 py-3 font-medium">مسلسل</th>
+                  <th className="w-8 px-2 py-3"></th>
+                  <th className="px-4 py-3 font-medium">م</th>
                   <th className="px-4 py-3 font-medium">بند التقييم</th>
                   <th className="px-4 py-3 font-medium">الحد الأقصى</th>
                   <th className="px-4 py-3 font-medium">النوع</th>
+                  <th className="px-4 py-3 font-medium">ترتيب العرض</th>
+                  <th className="px-4 py-3 font-medium">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
-                {evalItems.map(it => (
-                  <tr key={it.id} className="border-b border-gray-100 last:border-0">
-                    <td className="px-4 py-2">{toArabicDigits(it.serial)}</td>
-                    <td className="px-4 py-2">
-                      <input
-                        value={it.name || ''}
-                        onChange={e => setItemField(it.id, 'name', e.target.value)}
-                        className="input-field py-1 text-sm min-w-[14rem]"
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        value={toArabicDigits(it.max_degree ?? '')}
-                        onChange={e => setItemField(it.id, 'max_degree', toWesternDigits(e.target.value).replace(/[^0-9.]/g, ''))}
-                        className="input-field py-1 text-sm w-24 text-center"
-                        inputMode="numeric"
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      {it.kind === 'computed'
-                        ? <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">محسوب</span>
-                        : <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">يدوي</span>}
-                    </td>
-                  </tr>
-                ))}
+                {evalItems.map((it, i) => {
+                  const computed = it.kind === 'computed';
+                  const edit = itemEdit?.id === it.id ? itemEdit : null;
+                  const orderButton = 'rounded border border-gray-300 px-2 py-0.5 text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30';
+                  return (
+                    <tr
+                      key={it.id}
+                      draggable={!itemEdit && !itemsBusy}
+                      onDragStart={() => setItemDragIndex(i)}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={() => { if (itemDragIndex !== null) moveItem(itemDragIndex, i); setItemDragIndex(null); }}
+                      onDragEnd={() => setItemDragIndex(null)}
+                      className={`border-b border-gray-100 last:border-0 ${!itemEdit ? 'cursor-move' : ''} ${itemDragIndex === i ? 'opacity-40' : ''}`}
+                    >
+                      <td className="px-2 py-2 text-gray-300" title="اسحب لتغيير الترتيب"><DragHandle /></td>
+                      <td className="px-4 py-2 font-bold text-gray-500">{toArabicDigits(i + 1)}</td>
+                      <td className="px-4 py-2">
+                        {edit ? (
+                          <input
+                            autoFocus
+                            className="input-field py-1 text-sm min-w-[14rem]"
+                            value={edit.name}
+                            onChange={e => setItemEdit(v => (v ? { ...v, name: e.target.value } : v))}
+                            onKeyDown={e => { if (e.key === 'Enter') saveItemEdit(); if (e.key === 'Escape') setItemEdit(null); }}
+                          />
+                        ) : (
+                          <span className="font-medium text-gray-900">{toArabicDigits(it.name)}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {edit ? (
+                          <input
+                            className="input-field py-1 text-sm w-24 text-center"
+                            inputMode="numeric"
+                            value={toArabicDigits(edit.max)}
+                            onChange={e => setItemEdit(v => (v ? { ...v, max: toWesternDigits(e.target.value).replace(/[^0-9.]/g, '') } : v))}
+                            onKeyDown={e => { if (e.key === 'Enter') saveItemEdit(); if (e.key === 'Escape') setItemEdit(null); }}
+                          />
+                        ) : (
+                          toArabicDigits(it.max_degree)
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {computed
+                          ? <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">محسوب</span>
+                          : <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">يدوي</span>}
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex gap-1">
+                          <button onClick={() => moveItem(i, i - 1)} disabled={itemsBusy || !!itemEdit || i === 0} title="تقديم" aria-label="تقديم" className={orderButton}>▲</button>
+                          <button onClick={() => moveItem(i, i + 1)} disabled={itemsBusy || !!itemEdit || i === evalItems.length - 1} title="تأخير" aria-label="تأخير" className={orderButton}>▼</button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        {computed ? (
+                          <span className="text-xs text-gray-400">ثابت</span>
+                        ) : edit ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={saveItemEdit}
+                              disabled={itemsBusy || !edit.name.trim() || !(Number(edit.max) > 0)}
+                              className="btn-primary px-3 py-1 text-xs disabled:opacity-50"
+                            >
+                              حفظ
+                            </button>
+                            <button onClick={() => setItemEdit(null)} disabled={itemsBusy} className="btn-secondary px-3 py-1 text-xs">إلغاء</button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => { setItemEdit({ id: it.id, name: it.name || '', max: String(it.max_degree ?? '') }); setItemsMsg(''); setItemsError(''); }}
+                              disabled={itemsBusy || !!itemEdit}
+                              className="text-blue-700 hover:underline disabled:text-gray-300 disabled:no-underline"
+                            >
+                              تعديل
+                            </button>
+                            <button
+                              onClick={() => removeItem(it)}
+                              disabled={itemsBusy || !!itemEdit || it.scored > 0}
+                              title={it.scored > 0 ? 'سجّل الأعضاء درجات على هذا البند — لا يمكن حذفه' : undefined}
+                              className="text-red-600 hover:underline disabled:cursor-not-allowed disabled:text-gray-300 disabled:no-underline"
+                            >
+                              حذف
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
                 <tr className="border-t-2 border-gray-200 font-bold bg-gray-50">
-                  <td className="px-4 py-2" colSpan={2}>المجموع الأقصى</td>
-                  <td className="px-4 py-2 text-center">{toArabicDigits(evalItems.reduce((s, it) => s + (Number(it.max_degree) || 0), 0))}</td>
-                  <td></td>
+                  <td className="px-4 py-2" colSpan={3}>المجموع الأقصى</td>
+                  <td className="px-4 py-2">{toArabicDigits(evalItems.reduce((s, it) => s + (Number(it.max_degree) || 0), 0))}</td>
+                  <td colSpan={3}></td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <button onClick={saveEvalItems} disabled={itemsSaving} className="btn-primary mt-4 disabled:opacity-50">
-            {itemsSaving ? 'جاري الحفظ...' : 'حفظ البنود'}
-          </button>
         </div>
       )}
 

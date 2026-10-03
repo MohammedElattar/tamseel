@@ -193,6 +193,7 @@ function BasicGrid({ h, b, large, committeeType, childrenRows }: { h: any; b: an
       ['زيادة الوزن', num(b.tanasok)],
       ['عدد الأبناء', num(b.boy_no)],
       ['عدد البنات', num(b.girl_no)],
+      ['محل الإقامة', b.moh_n || '-'],
     ];
     return (
       <div className="space-y-3">
@@ -236,6 +237,7 @@ function BasicGrid({ h, b, large, committeeType, childrenRows }: { h: any; b: an
           <Row label="التخصص" value={h.spec_name} />
           <Row label="أعلى تأهيل" value={b.main_qualify_spec} />
           <Row label="التأهيل المدني" value={b.civil_qualify} />
+          <Row label="محل الإقامة" value={b.moh_n} />
         </div>
 
         {isTagdded && (
