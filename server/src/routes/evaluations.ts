@@ -372,7 +372,7 @@ router.get('/current', (req: AuthRequest, res: Response) => {
 
   // التمثيل العسكري voting inputs: the committee بنود, this officer's admin-entered computed بنود
   // (مسير الخدمة % + لغة إنجليزية), this member's saved scores, and أعلى تأهيل for the card side panel,
-  // plus the officer-info facts (التناسق، الحالة الاجتماعية، متوسط تقارير الكفاءة).
+  // plus the officer-info facts (الطول، الوزن، التناسق، الحالة الاجتماعية، متوسط تقارير الكفاءة).
   const evalItems = mapRows(db.exec(
     'SELECT id, serial, name, max_degree, kind, source FROM committee_eval_items WHERE committee_id = ? ORDER BY serial',
     [committee.id]
@@ -386,6 +386,8 @@ router.get('/current', (req: AuthRequest, res: Response) => {
     activeOfficer.highest_tahil_mil = tq.mil_qualification ?? null;
     activeOfficer.highest_tahil_civil = tq.civil_qualification ?? null;
     activeOfficer.marital_status = tq.marital_status ?? null;
+    activeOfficer.weight = tq.weight ?? null;
+    activeOfficer.height = tq.height ?? null;
     activeOfficer.tanasok = tq.fark_wazn ?? (tq.weight != null && tq.height != null ? tq.weight + 100 - tq.height : null);
     activeOfficer.kafaa_avg = kafaaAverage(db, activeOfficer.officer_id);
     const ss = mapRows(db.exec(

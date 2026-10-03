@@ -68,6 +68,8 @@ const COLUMN_MAP: Record<string, Record<string, string>> = {
     SPEB_N: 'speciality',
     TRANING_YEAR: 'training_year',
     ARM_C: 'arm_code',
+    // الحالة الاجتماعية arrives as the MARIT lookup's text. HEIGHT / WEIGHT auto-map.
+    MARIT_N: 'marital_status',
   },
   // الوظائف السابقة: المرتب is one column that arrives under either name (RAN_N_1 or
   // RAN_N_MRTB); both map to ran_n_mrtb. TO_DATE_ drops its trailing underscore to to_date.

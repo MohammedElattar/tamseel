@@ -48,7 +48,7 @@ const allowedValues = (max: number): number[] => {
 function InfoField({ label, value, warn }: { label: string; value: any; warn?: boolean }) {
   return (
     <>
-      <dt className="text-xl font-bold text-slate-600">{label}</dt>
+      <dt className="shrink-0 text-xl font-bold text-slate-600">{label}</dt>
       <dd className={`min-w-0 text-2xl font-bold break-words ${warn ? 'text-red-700' : 'text-slate-900'}`}>
         {value == null || value === '' ? '-' : toArabicDigits(value)}
       </dd>
@@ -199,12 +199,31 @@ export default function TamseelVotingScreen({
               <InfoField label="الوظيفة" value={officer?.job_name} />
               <InfoField label="الوحدة" value={officer?.unit_name} />
             </dl>
-            <dl className="grid grid-cols-[auto_minmax(0,1fr)] content-start items-baseline gap-x-3 gap-y-1">
-              <InfoField label="الاسم" value={[officer?.rank_name, officer?.officer_name].filter(Boolean).join(' / ')} />
-              {/* Fitness flag: weight + 100 - height at or above 15 is a concern. */}
-              <InfoField label="التناسق" value={officer?.tanasok} warn={officer?.tanasok != null && officer.tanasok >= 15} />
-              <InfoField label="الحالة الاجتماعية" value={officer?.marital_status} />
-              <InfoField label="متوسط تقارير الكفاءة" value={kafaaAvg} />
+            {/* Each value sits right after its own label: these labels differ a lot in length, so a
+                shared label column would leave a wide gap after the short ones (الاسم). */}
+            <dl className="flex flex-col gap-y-1">
+              <div className="flex items-baseline gap-3">
+                <InfoField label="الاسم" value={[officer?.rank_name, officer?.officer_name].filter(Boolean).join(' / ')} />
+              </div>
+              {/* الطول، الوزن and التناسق belong together, so they share one line. التناسق (weight + 100 -
+                  height) turns red at 15 or more — the fitness flag. */}
+              <div className="flex flex-wrap items-baseline gap-x-8 gap-y-1">
+                {[
+                  { label: 'الطول', value: officer?.height },
+                  { label: 'الوزن', value: officer?.weight },
+                  { label: 'التناسق', value: officer?.tanasok, warn: officer?.tanasok != null && officer.tanasok >= 15 },
+                ].map(fact => (
+                  <div key={fact.label} className="flex items-baseline gap-3">
+                    <InfoField {...fact} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-baseline gap-3">
+                <InfoField label="الحالة الاجتماعية" value={officer?.marital_status} />
+              </div>
+              <div className="flex items-baseline gap-3">
+                <InfoField label="متوسط تقارير الكفاءة" value={kafaaAvg} />
+              </div>
             </dl>
           </div>
         </div>
