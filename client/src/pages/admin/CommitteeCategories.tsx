@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 import { getCategories, createCategory, updateCategory, deleteCategory, reorderCategories } from '../../api/categories';
 import type { OfficerCategory } from '../../api/categories';
 import DragHandle from '../../components/DragHandle';
-import { toArabicDigits } from '../../utils/format';
+import { toArabicDigits, toWesternDigits } from '../../utils/format';
+
+// عدد الضباط المطلوب ترشيحه is typed in Arabic-Indic digits but kept as a Western-digit string; '' = not set.
+const digitsOnly = (raw: string) => toWesternDigits(raw).replace(/[^0-9]/g, '');
+const countValue = (digits: string) => (digits === '' ? null : Number(digits));
 
 // ترتيب اللجنة: the global list of officer categories (e.g. ملحق عسكري). Each committee officer gets
 // one in «بيانات الضباط». The list's order (drag or ▲▼) is the order every committee's session
@@ -13,8 +17,10 @@ export default function CommitteeCategories() {
   const [rows, setRows] = useState<OfficerCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
+  const [newCount, setNewCount] = useState('');
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
+  const [editCount, setEditCount] = useState('');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -49,12 +55,20 @@ export default function CommitteeCategories() {
   const add = async (e: FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
-    if (await run(() => createCategory(newName), 'تمت الإضافة')) setNewName('');
+    if (await run(() => createCategory(newName, countValue(newCount)), 'تمت الإضافة')) {
+      setNewName('');
+      setNewCount('');
+    }
   };
 
   const saveEdit = async () => {
     if (editId == null || !editName.trim()) return;
-    if (await run(() => updateCategory(editId, editName), 'تم حفظ التعديل')) setEditId(null);
+    if (await run(() => updateCategory(editId, editName, countValue(editCount)), 'تم حفظ التعديل')) setEditId(null);
+  };
+
+  const editKeys = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') saveEdit();
+    if (e.key === 'Escape') setEditId(null);
   };
 
   const remove = async (c: OfficerCategory) => {
@@ -112,6 +126,16 @@ export default function CommitteeCategories() {
             placeholder="مثال: ملحق عسكري"
           />
         </div>
+        <div className="w-56">
+          <label htmlFor="new-category-count" className="label">عدد الضباط المطلوب ترشيحه</label>
+          <input
+            id="new-category-count"
+            className="input-field text-center"
+            inputMode="numeric"
+            value={toArabicDigits(newCount)}
+            onChange={e => setNewCount(digitsOnly(e.target.value))}
+          />
+        </div>
         <button type="submit" disabled={busy || !newName.trim()} className="btn-primary disabled:opacity-50">إضافة</button>
       </form>
 
@@ -122,6 +146,7 @@ export default function CommitteeCategories() {
               <th className="w-8 px-2 py-3"></th>
               <th className="px-4 py-3 font-medium">م</th>
               <th className="px-4 py-3 font-medium">اسم الترتيب</th>
+              <th className="px-4 py-3 font-medium">عدد الضباط المطلوب ترشيحه</th>
               <th className="px-4 py-3 font-medium">ضباط في لجان لم تنتهِ</th>
               <th className="px-4 py-3 font-medium">ترتيب العرض</th>
               <th className="px-4 py-3 font-medium">إجراءات</th>
@@ -151,13 +176,26 @@ export default function CommitteeCategories() {
                       className="input-field py-1"
                       value={editName}
                       onChange={e => setEditName(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') saveEdit();
-                        if (e.key === 'Escape') setEditId(null);
-                      }}
+                      onKeyDown={editKeys}
                     />
                   ) : (
                     <span className="font-medium text-gray-900">{toArabicDigits(c.name)}</span>
+                  )}
+                </td>
+                <td className="px-4 py-2">
+                  {editId === c.id ? (
+                    <input
+                      className="input-field w-24 py-1 text-center"
+                      inputMode="numeric"
+                      aria-label="عدد الضباط المطلوب ترشيحه"
+                      value={toArabicDigits(editCount)}
+                      onChange={e => setEditCount(digitsOnly(e.target.value))}
+                      onKeyDown={editKeys}
+                    />
+                  ) : c.required_count != null ? (
+                    toArabicDigits(c.required_count)
+                  ) : (
+                    <span className="text-gray-300">—</span>
                   )}
                 </td>
                 <td className="px-4 py-2">{toArabicDigits(c.in_use)}</td>
@@ -181,7 +219,13 @@ export default function CommitteeCategories() {
                     ) : (
                       <>
                         <button
-                          onClick={() => { setEditId(c.id); setEditName(c.name); setMsg(''); setError(''); }}
+                          onClick={() => {
+                            setEditId(c.id);
+                            setEditName(c.name);
+                            setEditCount(c.required_count != null ? String(c.required_count) : '');
+                            setMsg('');
+                            setError('');
+                          }}
                           disabled={busy}
                           className="text-blue-700 hover:underline"
                         >
@@ -203,7 +247,7 @@ export default function CommitteeCategories() {
             ))}
             {!rows.length && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">لا توجد قيم بعد — أضف أول ترتيب بالأعلى</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">لا توجد قيم بعد — أضف أول ترتيب بالأعلى</td>
               </tr>
             )}
           </tbody>

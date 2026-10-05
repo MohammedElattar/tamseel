@@ -87,8 +87,8 @@ function sessionOrder(db: any, committeeId: number): Record<string, any>[] {
 const isOpen = (o: Record<string, any>) => !Number(o.hidden) && !Number(o.done);
 
 // ترتيب اللجنة: the first time the session reaches a category, every screen shows that category's
-// intro until the commander presses متابعة. Returns what the intro shows — the name and how many
-// officers it holds — or null when nothing is pending.
+// intro until the commander presses متابعة. Returns what the intro shows — the name, how many
+// officers it holds and عدد الضباط المطلوب ترشيحه (null when not set) — or null when nothing is pending.
 function pendingCategoryIntro(db: any, committeeId: number, categoryId: number): Record<string, any> | null {
   const introduced = mapRows(db.exec(
     'SELECT 1 FROM committee_category_intros WHERE committee_id = ? AND category_id = ?',
@@ -96,7 +96,7 @@ function pendingCategoryIntro(db: any, committeeId: number, categoryId: number):
   )).length > 0;
   if (introduced) return null;
   const category = mapRows(db.exec(
-    `SELECT cat.name, COUNT(*) AS officers
+    `SELECT cat.name, cat.required_count, COUNT(*) AS officers
      FROM committee_officers co
      JOIN officer_categories cat ON cat.id = co.category_id
      WHERE co.committee_id = ? AND co.category_id = ? AND co.hidden = 0
@@ -104,7 +104,12 @@ function pendingCategoryIntro(db: any, committeeId: number, categoryId: number):
     [committeeId, categoryId]
   ))[0];
   if (!category) return null;
-  return { id: categoryId, name: category.name, officer_count: Number(category.officers) };
+  return {
+    id: categoryId,
+    name: category.name,
+    officer_count: Number(category.officers),
+    required_count: category.required_count != null ? Number(category.required_count) : null,
+  };
 }
 
 // متوسط تقارير الكفاءة (legacy KAFAA_AVERAGE): round(avg of the commander ratings) mapped to a

@@ -1,9 +1,11 @@
 import api from './client';
 
 // ترتيب اللجنة values. in_use = officers holding it in committees that have not finished.
+// required_count = عدد الضباط المطلوب ترشيحه (null when not set).
 export interface OfficerCategory {
   id: number;
   name: string;
+  required_count: number | null;
   in_use: number;
 }
 
@@ -12,13 +14,13 @@ export async function getCategories(): Promise<OfficerCategory[]> {
   return data;
 }
 
-export async function createCategory(name: string) {
-  const { data } = await api.post('/categories', { name });
+export async function createCategory(name: string, requiredCount: number | null) {
+  const { data } = await api.post('/categories', { name, required_count: requiredCount });
   return data;
 }
 
-export async function updateCategory(id: number, name: string) {
-  const { data } = await api.put(`/categories/${id}`, { name });
+export async function updateCategory(id: number, name: string, requiredCount: number | null) {
+  const { data } = await api.put(`/categories/${id}`, { name, required_count: requiredCount });
   return data;
 }
 

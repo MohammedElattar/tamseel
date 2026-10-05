@@ -81,7 +81,7 @@ export default function ServiceScoreEntry() {
       case 'kafaa':
         return (
           <div>
-            <div className="mb-2 text-sm">
+            <div className="mb-2">
               <span className="text-gray-500">متوسط تقارير الكفاءة: </span>
               <b className="text-blue-800">{d.kafaa_avg != null ? toArabicDigits(d.kafaa_avg) : '—'}</b>
             </div>
@@ -92,7 +92,7 @@ export default function ServiceScoreEntry() {
         );
       case 'tashkeelat':
         return (data.tashkeelat && data.tashkeelat.length) ? (
-          <div className="text-sm text-gray-700">
+          <div className="text-gray-700">
             مدة التشكيلات: <b>{toArabicDigits(data.tashkeelat[0].tashkeelat ?? '—')}</b>
             <span className="mx-3">|</span>
             مدة الخدمة: <b>{toArabicDigits(data.tashkeelat[0].khadma ?? '—')}</b>
@@ -102,7 +102,7 @@ export default function ServiceScoreEntry() {
         return <MiniTable rows={data.qualification} cols={[['txt', 'التأهيل'], ['grade', 'الدرجة المستوردة']]} empty="لا يوجد تأهيل" />;
       case 'awsama':
         return (data.medals && data.medals.length)
-          ? <ul className="list-disc pr-5 text-sm text-gray-700 space-y-0.5">{data.medals.map((m: any, i: number) => <li key={i}>{toArabicDigits(m.wis_n)}</li>)}</ul>
+          ? <ul className="list-disc pr-5 text-gray-700 space-y-1">{data.medals.map((m: any, i: number) => <li key={i}>{toArabicDigits(m.wis_n)}</li>)}</ul>
           : <Empty t="لا توجد أوسمة" />;
       case 'ba3asat':
         return <MiniTable rows={data.ba3asat} cols={[
@@ -110,7 +110,7 @@ export default function ServiceScoreEntry() {
         ]} empty="لا توجد بعثات" dateKeys={['date_from', 'date_to']} />;
       case 'gaza':
         return (data.geza && data.geza.length)
-          ? <ul className="list-disc pr-5 text-sm text-gray-700 space-y-1">{data.geza.map((g: any, i: number) => <li key={i}>{toArabicDigits(g.gaza)}</li>)}</ul>
+          ? <ul className="list-disc pr-5 text-gray-700 space-y-1">{data.geza.map((g: any, i: number) => <li key={i}>{toArabicDigits(g.gaza)}</li>)}</ul>
           : <Empty t="لا توجد محاكمات أو جزاءات" />;
       default:
         return null;
@@ -160,12 +160,12 @@ export default function ServiceScoreEntry() {
       <div className="card mb-4 border-2 border-emerald-200">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <h3 className="font-bold text-gray-800">لغة إنجليزية</h3>
+            <h3 className="text-xl font-bold text-gray-800">لغة إنجليزية</h3>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500">الدرجة</label>
+            <label className="text-base font-semibold text-gray-600">الدرجة</label>
             <input
-              className="input-field py-1 w-28 text-center border-amber-400 bg-amber-50 font-bold"
+              className="input-field py-1 w-28 text-center text-lg border-amber-400 bg-amber-50 font-bold"
               value={toArabicDigits(english)}
               onChange={(e) => setEnglishInput(e.target.value)}
               inputMode="numeric"
@@ -179,14 +179,14 @@ export default function ServiceScoreEntry() {
         {basis.map((b) => (
           <div key={b.component} className="card">
             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-              <h3 className="font-bold text-gray-800">
+              <h3 className="text-xl font-bold text-gray-800">
                 {toArabicDigits(b.label)}
-                <span className="text-xs text-gray-400 font-normal"> (حد أقصى {toArabicDigits(b.max_degree)})</span>
+                <span className="text-base font-semibold text-gray-500"> (حد أقصى {toArabicDigits(b.max_degree)})</span>
               </h3>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-500">الدرجة</label>
+                <label className="text-base font-semibold text-gray-600">الدرجة</label>
                 <input
-                  className="input-field py-1 w-28 text-center border-amber-400 bg-amber-50 font-bold"
+                  className="input-field py-1 w-28 text-center text-lg border-amber-400 bg-amber-50 font-bold"
                   value={toArabicDigits(scores[b.component] ?? '')}
                   onChange={(e) => setScore(b.component, e.target.value)}
                   inputMode="numeric"
@@ -194,7 +194,7 @@ export default function ServiceScoreEntry() {
                 />
               </div>
             </div>
-            <div className="border-t border-gray-100 pt-2">{renderData(b.component)}</div>
+            <div className="border-t border-gray-100 pt-2 text-lg font-bold">{renderData(b.component)}</div>
           </div>
         ))}
       </div>
@@ -203,7 +203,7 @@ export default function ServiceScoreEntry() {
 }
 
 function Empty({ t }: { t: string }) {
-  return <p className="text-sm text-gray-400">{t}</p>;
+  return <p className="font-normal text-gray-400">{t}</p>;
 }
 
 function MiniTable({ rows, cols, empty, dateKeys = [] }: {
@@ -217,16 +217,16 @@ function MiniTable({ rows, cols, empty, dateKeys = [] }: {
   };
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+      <table className="w-full">
         <thead>
           <tr className="text-gray-500 border-b">
-            {cols.map(([, label]) => <th key={label} className="px-2 py-1 text-right font-medium">{label}</th>)}
+            {cols.map(([, label]) => <th key={label} className="px-3 py-2 text-right">{label}</th>)}
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i} className="border-b border-gray-50 last:border-0">
-              {cols.map(([key]) => <td key={key} className="px-2 py-1">{cell(r, key)}</td>)}
+              {cols.map(([key]) => <td key={key} className="px-3 py-2">{cell(r, key)}</td>)}
             </tr>
           ))}
         </tbody>

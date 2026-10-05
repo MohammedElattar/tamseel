@@ -6,6 +6,8 @@ export interface CategoryIntro {
   id: number;
   name: string;
   officer_count: number;
+  // عدد الضباط المطلوب ترشيحه; null when the category has none set.
+  required_count: number | null;
 }
 
 interface Props {
@@ -115,9 +117,16 @@ export default function CategoryIntroOverlay({ intro, onContinue, error }: Props
         <h2 ref={titleRef} className="whitespace-nowrap text-7xl font-extrabold leading-tight text-gray-900">
           {toArabicDigits(shown.name)}
         </h2>
-        <p className="mx-auto mt-8 w-fit rounded-xl bg-gray-100 px-6 py-2.5 text-2xl font-bold text-gray-700">
-          عدد الضباط: {toArabicDigits(shown.officer_count)}
-        </p>
+        <div className="mt-8 flex flex-col items-center gap-5">
+          {shown.required_count != null && (
+            <p className="rounded-2xl bg-gray-100 px-10 py-3 text-5xl font-bold leading-tight text-gray-800">
+              عدد الضباط المطلوب ترشيحه: {toArabicDigits(shown.required_count)}
+            </p>
+          )}
+          <p className="rounded-2xl bg-gray-100 px-10 py-3 text-5xl font-bold leading-tight text-gray-800">
+            عدد الضباط: {toArabicDigits(shown.officer_count)}
+          </p>
+        </div>
 
         {onContinue ? (
           <button

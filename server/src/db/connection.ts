@@ -162,6 +162,8 @@ function runMigrations(database: Database): void {
     'ALTER TABLE committee_officers ADD COLUMN category_id INTEGER',
     // ترتيب اللجنة: the categories' global presentation order.
     'ALTER TABLE officer_categories ADD COLUMN position INTEGER NOT NULL DEFAULT 0',
+    // ترتيب اللجنة: عدد الضباط المطلوب ترشيحه per category.
+    'ALTER TABLE officer_categories ADD COLUMN required_count INTEGER',
   ];
   for (const sql of additions) {
     try {

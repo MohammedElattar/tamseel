@@ -29,13 +29,23 @@ const IN_USE_SQL =
 
 const cleanName = (raw: unknown): string => String(raw ?? '').replace(/\s+/g, ' ').trim();
 
+// عدد الضباط المطلوب ترشيحه: blank means not set (null); undefined means the value is invalid.
+const parseCount = (raw: unknown): number | null | undefined => {
+  if (raw == null || String(raw).trim() === '') return null;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n >= 0 ? n : undefined;
+};
+
 function findCategory(db: any, id: number): Record<string, any> | undefined {
-  return mapRows(db.exec(`SELECT cat.id, cat.name, (${IN_USE_SQL}) AS in_use FROM officer_categories cat WHERE cat.id = ?`, [id]))[0];
+  return mapRows(db.exec(
+    `SELECT cat.id, cat.name, cat.required_count, (${IN_USE_SQL}) AS in_use FROM officer_categories cat WHERE cat.id = ?`,
+    [id]
+  ))[0];
 }
 
 function listCategories(db: any): Record<string, any>[] {
   return mapRows(db.exec(
-    `SELECT cat.id, cat.name, (${IN_USE_SQL}) AS in_use FROM officer_categories cat ORDER BY cat.position, cat.id`
+    `SELECT cat.id, cat.name, cat.required_count, (${IN_USE_SQL}) AS in_use FROM officer_categories cat ORDER BY cat.position, cat.id`
   ));
 }
 
@@ -57,17 +67,22 @@ router.post('/', (req: AuthRequest, res: Response) => {
     res.status(400).json({ error: 'اسم الترتيب مطلوب' });
     return;
   }
+  const requiredCount = parseCount(req.body?.required_count);
+  if (requiredCount === undefined) {
+    res.status(400).json({ error: 'عدد الضباط المطلوب ترشيحه يجب أن يكون رقماً صحيحاً' });
+    return;
+  }
   if (nameTaken(db, name)) {
     res.status(409).json({ error: 'هذا الاسم موجود بالفعل' });
     return;
   }
   db.run(
-    'INSERT INTO officer_categories (name, position) VALUES (?, (SELECT COALESCE(MAX(position), 0) + 1 FROM officer_categories))',
-    [name]
+    'INSERT INTO officer_categories (name, required_count, position) VALUES (?, ?, (SELECT COALESCE(MAX(position), 0) + 1 FROM officer_categories))',
+    [name, requiredCount]
   );
   const id = Number(db.exec('SELECT last_insert_rowid()')[0].values[0][0]);
   saveDB();
-  res.status(201).json({ id, name, in_use: 0 });
+  res.status(201).json({ id, name, required_count: requiredCount, in_use: 0 });
 });
 
 // Save the presentation order: `category_ids` lists every category, first to last. Unfinished
@@ -102,11 +117,16 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
     res.status(400).json({ error: 'اسم الترتيب مطلوب' });
     return;
   }
+  const requiredCount = parseCount(req.body?.required_count);
+  if (requiredCount === undefined) {
+    res.status(400).json({ error: 'عدد الضباط المطلوب ترشيحه يجب أن يكون رقماً صحيحاً' });
+    return;
+  }
   if (nameTaken(db, name, id)) {
     res.status(409).json({ error: 'هذا الاسم موجود بالفعل' });
     return;
   }
-  db.run('UPDATE officer_categories SET name = ? WHERE id = ?', [name, id]);
+  db.run('UPDATE officer_categories SET name = ?, required_count = ? WHERE id = ?', [name, requiredCount, id]);
   saveDB();
   res.json(findCategory(db, id));
 });

@@ -623,6 +623,8 @@ CREATE TABLE IF NOT EXISTS officer_categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
   position INTEGER NOT NULL DEFAULT 0,
+  -- عدد الضباط المطلوب ترشيحه, shown on the category's intro screen; NULL = not set.
+  required_count INTEGER,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
